@@ -22,27 +22,6 @@ The color names and values below come from the [official Everforest palette](htt
 
 ![#7A8478][7A8478]![#859289][859289]![#9DA9A0][9DA9A0]
 
-| Group | Name | Hex |
-| --- | --- | --- |
-| Background | `bg_dim` | `#232A2E` |
-| Background | `bg0` | `#2D353B` |
-| Background | `bg1` | `#343F44` |
-| Background | `bg2` | `#3D484D` |
-| Background | `bg3` | `#475258` |
-| Background | `bg4` | `#4F585E` |
-| Background | `bg5` | `#56635F` |
-| Foreground | `fg` | `#D3C6AA` |
-| Accent | `red` | `#E67E80` |
-| Accent | `orange` | `#E69875` |
-| Accent | `yellow` | `#DBBC7F` |
-| Accent | `green` | `#A7C080` |
-| Accent | `aqua` | `#83C092` |
-| Accent | `blue` | `#7FBBB3` |
-| Accent | `purple` | `#D699B6` |
-| Grey | `grey0` | `#7A8478` |
-| Grey | `grey1` | `#859289` |
-| Grey | `grey2` | `#9DA9A0` |
-
 [232A2E]: https://fakeimg.ryd.tools/96/232A2E/D3C6AA/?text=%23232A2E&font=noto&font_size=12 "bg_dim - #232A2E"
 [2D353B]: https://fakeimg.ryd.tools/96/2D353B/D3C6AA/?text=%232D353B&font=noto&font_size=12 "bg0 - #2D353B"
 [343F44]: https://fakeimg.ryd.tools/96/343F44/D3C6AA/?text=%23343F44&font=noto&font_size=12 "bg1 - #343F44"
