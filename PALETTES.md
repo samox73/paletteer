@@ -14,7 +14,8 @@ Paletteer supports these palettes:
 
 The color names and values below come from the [official Everforest palette](https://github.com/sainnhe/everforest/blob/master/palette.md). Paletteer uses these colors to select hue and chroma; it preserves the source image's lightness.
 
-Neutral colors are used by default. Accents require `--accents` / `-a`.
+Neutral and accent colors are used by default. `--neutral-only` excludes the
+accent colors.
 
 ## Custom palette files
 
@@ -27,8 +28,8 @@ accents = ["#e67e80", "#a7c080", "#7fbbb3"]
 ```
 
 `name` must contain only `a-z`, `0-9`, and single hyphens. `colors` is a
-non-empty array of `#RRGGBB` strings. `accents` is optional and is enabled
-with `--accents`.
+non-empty array of `#RRGGBB` strings. `accents` is optional and included by
+default; `--neutral-only` excludes it.
 
 ## everforest-dark-medium
 

@@ -97,12 +97,12 @@ fn palette(theme: Theme) -> &'static ThemePalette {
     }
 }
 
-pub fn built_in_colors(theme: Theme, accents: bool) -> Vec<u32> {
+pub fn built_in_colors(theme: Theme, neutral_only: bool) -> Vec<u32> {
     let palette = palette(theme);
     palette
         .neutral
         .iter()
-        .chain(if accents { palette.accents } else { &[] })
+        .chain(if neutral_only { &[] } else { palette.accents })
         .copied()
         .collect()
 }
@@ -124,9 +124,7 @@ fn nearest(color: Oklab, colors: &[Oklab]) -> Oklab {
     *colors
         .iter()
         .min_by(|a, b| {
-            let distance = |x: &Oklab| {
-                (color.l - x.l).powi(2) + (color.a - x.a).powi(2) + (color.b - x.b).powi(2)
-            };
+            let distance = |x: &Oklab| (color.a - x.a).powi(2) + (color.b - x.b).powi(2);
             distance(a).total_cmp(&distance(b))
         })
         .expect("palette is not empty")
@@ -220,20 +218,20 @@ mod tests {
     use image::GenericImageView;
 
     #[test]
-    fn nearest_selects_expected_color() {
-        let colors = [Oklab::new(0.1, 0.0, 0.0), Oklab::new(0.8, 0.2, -0.1)];
-        assert_eq!(nearest(Oklab::new(0.75, 0.18, -0.08), &colors), colors[1]);
+    fn nearest_ignores_lightness() {
+        let colors = [Oklab::new(0.1, 0.18, -0.08), Oklab::new(0.75, 0.0, 0.0)];
+        assert_eq!(nearest(Oklab::new(0.75, 0.18, -0.08), &colors), colors[0]);
     }
 
     #[test]
-    fn accents_are_opt_in() {
+    fn all_colors_are_used_by_default() {
         assert_eq!(
             built_in_colors(Theme::EverforestDarkMedium, false).len(),
-            11
+            EVERFOREST.neutral.len() + EVERFOREST.accents.len()
         );
         assert_eq!(
             built_in_colors(Theme::EverforestDarkMedium, true).len(),
-            EVERFOREST.neutral.len() + EVERFOREST.accents.len()
+            EVERFOREST.neutral.len()
         );
     }
 

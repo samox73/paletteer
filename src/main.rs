@@ -90,8 +90,8 @@ struct Cli {
     format: OutputFormat,
     #[arg(short = 'q', long, value_parser = clap::value_parser!(u8).range(1..=100))]
     quality: Option<u8>,
-    #[arg(short = 'a', long, help = "Include palette accent colors")]
-    accents: bool,
+    #[arg(long, help = "Exclude the palette's accent colors")]
+    neutral_only: bool,
     #[arg(
         long,
         default_value_t = 1.0,
@@ -192,7 +192,7 @@ fn select_palette(cli: &Cli) -> Result<SelectedPalette, String> {
             fs::read_to_string(path).map_err(|error| format!("{}: {error}", path.display()))?;
         let mut palette =
             parse_custom_palette(&text).map_err(|error| format!("{}: {error}", path.display()))?;
-        if cli.accents {
+        if !cli.neutral_only {
             palette.colors.extend(palette.accents);
         }
         return Ok(SelectedPalette {
@@ -203,7 +203,7 @@ fn select_palette(cli: &Cli) -> Result<SelectedPalette, String> {
     let theme = cli.theme.expect("clap requires a theme or palette");
     Ok(SelectedPalette {
         name: theme.name().to_owned(),
-        colors: recolor::built_in_colors(theme, cli.accents),
+        colors: recolor::built_in_colors(theme, cli.neutral_only),
     })
 }
 
@@ -234,6 +234,7 @@ fn already_recolored(path: &Path, palette_name: &str) -> bool {
                 .any(|theme| {
                     stem.ends_with(&format!("-{theme}"))
                         || stem.ends_with(&format!("-{theme}-accent"))
+                        || stem.ends_with(&format!("-{theme}-neutral"))
                 })
         })
 }
@@ -278,20 +279,20 @@ fn output_path(
     normalize_name: bool,
     format: OutputFormat,
     palette_name: &str,
-    accents: bool,
+    neutral_only: bool,
     mix: f32,
 ) -> Result<PathBuf, String> {
     let stem = input
         .file_stem()
         .and_then(|s| s.to_str())
         .ok_or_else(|| format!("invalid input name: {}", input.display()))?;
-    let accent_suffix = if accents { "-accent" } else { "" };
+    let neutral_suffix = if neutral_only { "-neutral" } else { "" };
     let mix_suffix = if mix == 1.0 {
         String::new()
     } else {
         format!("-mix-{mix}")
     };
-    let stem = format!("{stem}-{palette_name}{accent_suffix}{mix_suffix}");
+    let stem = format!("{stem}-{palette_name}{neutral_suffix}{mix_suffix}");
     let name = if normalize_name {
         normalized(&stem)?
     } else {
@@ -333,7 +334,7 @@ fn jobs(
     format: OutputFormat,
     overwrite: bool,
     palette_name: &str,
-    accents: bool,
+    neutral_only: bool,
     mix: f32,
 ) -> Result<Vec<Job>, String> {
     let mut paths = Vec::new();
@@ -362,7 +363,14 @@ fn jobs(
         if !supported(&input) {
             return Err(format!("unsupported file: {}", input.display()));
         }
-        let output = output_path(&input, normalize_name, format, palette_name, accents, mix)?;
+        let output = output_path(
+            &input,
+            normalize_name,
+            format,
+            palette_name,
+            neutral_only,
+            mix,
+        )?;
         if !outputs.insert(output.clone()) {
             return Err(format!(
                 "inputs resolve to the same output: {}",
@@ -389,7 +397,7 @@ fn run(cli: Cli) -> Result<(), String> {
         cli.format,
         cli.overwrite,
         &palette.name,
-        cli.accents,
+        cli.neutral_only,
         cli.mix,
     )? {
         let input_size = fs::metadata(&job.input)
@@ -507,7 +515,7 @@ mod tests {
                 1.0,
             )
             .unwrap(),
-            PathBuf::from("foo-everforest-dark-medium-accent.jpg")
+            PathBuf::from("foo-everforest-dark-medium-neutral.jpg")
         );
         assert_eq!(
             output_path(
@@ -531,7 +539,7 @@ mod tests {
                 0.5,
             )
             .unwrap(),
-            PathBuf::from("foo-everforest-dark-medium-accent-mix-0-5.jpg")
+            PathBuf::from("foo-everforest-dark-medium-neutral-mix-0-5.jpg")
         );
     }
 
