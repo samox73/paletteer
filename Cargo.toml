@@ -8,4 +8,5 @@ clap = { version = "4", features = ["derive"] }
 glob = "0.3"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
 palette = "0.7"
+rayon = "1"
 webp = "0.3"

@@ -1,6 +1,7 @@
 use crate::OutputFormat;
 use image::{ExtendedColorType, ImageEncoder, ImageReader, RgbaImage, codecs::jpeg::JpegEncoder};
 use palette::{FromColor, Oklab, Srgb};
+use rayon::prelude::*;
 use std::{
     fs,
     io::{self, Write},
@@ -65,9 +66,9 @@ fn nearest(color: Oklab, colors: &[Oklab]) -> Oklab {
 
 pub fn recolor(image: &mut RgbaImage, accents: bool) {
     let colors = palette_labs(accents);
-    for pixel in image.pixels_mut() {
+    image.as_mut().par_chunks_exact_mut(4).for_each(|pixel| {
         if pixel[3] == 0 {
-            continue;
+            return;
         }
         let original = Oklab::from_color(Srgb::new(
             pixel[0] as f32 / 255.0,
@@ -80,7 +81,7 @@ pub fn recolor(image: &mut RgbaImage, accents: bool) {
         pixel[0] = (r.clamp(0.0, 1.0) * 255.0).round() as u8;
         pixel[1] = (g.clamp(0.0, 1.0) * 255.0).round() as u8;
         pixel[2] = (b.clamp(0.0, 1.0) * 255.0).round() as u8;
-    }
+    });
 }
 
 pub fn encode_image(

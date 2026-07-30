@@ -1,6 +1,6 @@
-# paletteer
+# Paletteer
 
-Recolor PNG and JPEG wallpapers with the built-in `everforest-dark-medium` palette while preserving each pixel's source lightness. Outputs are written beside their inputs and never overwrite an existing file.
+Recolor PNG, JPEG and WEBP wallpapers with built-in or custom color palettes while preserving each pixel's source lightness.
 
 See [PALETTES.md](PALETTES.md) for the supported palette and its colors.
 
@@ -29,24 +29,29 @@ See [PALETTES.md](PALETTES.md) for the supported palette and its colors.
 <tr><td><img src="examples-400/DSC_2357.JPG" width="400" alt="Original DSC 2357"></td><td><img src="examples-400/dsc-2357-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2357"></td><td><img src="examples-400/dsc-2357-everforest-dark-medium-accent.jpg" width="400" alt="Everforest accent DSC 2357"></td></tr>
 </table>
 
+## Installation
+
 ```sh
 cargo install --path .
-paletteer -t everforest-dark-medium wallpaper.jpg
-paletteer -t everforest-dark-medium -f webp -q 85 wallpaper.jpg
-paletteer -t everforest-dark-medium -f jpg -q 90 wallpaper.png
-paletteer -t everforest-dark-medium --accents wallpaper.jpg
-paletteer -t everforest-dark-medium --overwrite wallpaper.jpg
-paletteer -t everforest-dark-medium images/
-paletteer -t everforest-dark-medium -n 'wallpapers/**/*-forest.{png,jpg,jpeg}'
 ```
 
-Directories include immediate PNG, JPG, and JPEG files only. Quote recursive globs for consistent shell behavior; unquoted globs work when the shell expands them.
+## Usage
 
-`--format` / `-f` accepts `png` (the lossless default), `webp`, or `jpg`. `--quality` / `-q` accepts 1–100 for WebP and JPEG (default 80); PNG rejects it. JPEG does not support alpha, so it discards it.
+```text
+paletteer [OPTIONS] --theme <THEME> <INPUT>...
+```
 
-Accent colors are disabled by default to avoid shifting natural highlights to unrelated hues. Use `--accents` / `-a` to include them.
-Accent-enabled outputs add `-accent` to their filename.
+| Argument | Required / default | Effect | Use case |
+| --- | --- | --- | --- |
+| `<INPUT>...` | Required; one or more | Recolors PNG, JPG, or JPEG files. Accepts individual files, directories, and expanded or quoted globs. Directories include immediate supported files only. | Process one image, batch a folder, or select files recursively with a quoted glob such as `'**/*-forest.jpg'`. |
+| `-t`, `--theme <THEME>` | Required; currently `everforest-dark-medium` | Selects the target color palette. | Choose the palette applied to every input. |
+| `-n`, `--normalize-name` | Optional; off | Lowercases the generated output stem and restricts it to `a-z`, `0-9`, and `-`. | Produce predictable, shell-friendly filenames from names containing spaces, punctuation, or uppercase characters. |
+| `-f`, `--format <FORMAT>` | Optional; `png` | Selects `png`, `webp`, or `jpg` output. PNG is lossless; JPEG discards alpha. | Choose lossless output, smaller WebP files, or broadly compatible JPEG files. |
+| `-q`, `--quality <1-100>` | Optional; `80` for WebP/JPEG | Sets lossy encoding quality. Using it with PNG is an error. | Trade output size for visual quality when writing WebP or JPEG. |
+| `-a`, `--accents` | Optional; off | Includes Everforest accent colors and adds `-accent` to the output filename. | Retain more colorful reds, oranges, yellows, greens, blues, and purples. |
+| `-o`, `--overwrite` | Optional; off | Replaces an existing output only after the new image encodes successfully. | Regenerate images without deleting old outputs manually. |
+| `-h`, `--help` | Optional | Prints the built-in CLI reference. | Check available arguments from the installed binary. |
 
-Existing outputs are rejected by default. Use `--overwrite` / `-o` to replace them after successful encoding.
-
-Files whose names already end in `-everforest-dark-medium` are skipped, preventing accidental repeat recoloring when processing directories or globs.
+Quote recursive globs for consistent behavior across shells. Files whose names
+already end in `-everforest-dark-medium` or
+`-everforest-dark-medium-accent` are skipped to prevent repeat recoloring.
