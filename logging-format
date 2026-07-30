@@ -1,0 +1,9 @@
+instead of outputting:
+converted alps-lake.jpg in 12.29s
+alps-lake-everforest-dark-medium.png
+converted snowy-alps.jpg in 6.74s
+snowy-alps-everforest-dark-medium.png
+
+we should output:
+alps-lake.jpg -> alps-lake-everforest-dark-medium.png in 12.29s
+snowy-alps.jpg -> snowy-alps-everforest-dark-medium.png in 6.74s
