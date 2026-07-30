@@ -74,3 +74,7 @@ Quote recursive globs for consistent behavior across shells. Files whose names
 already end in `-everforest-dark-medium` or
 `-everforest-dark-medium-accent` (optionally followed by `-mix-<value>`) are
 skipped to prevent repeat recoloring.
+
+## Acknoledgements
+
+This project was developed with assistance from AI coding tools. The resulting code was reviewed and tested by the maintainer.
