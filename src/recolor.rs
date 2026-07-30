@@ -8,6 +8,12 @@ use std::{
     time::Instant,
 };
 
+pub struct Conversion {
+    pub duration: std::time::Duration,
+    pub width: u32,
+    pub height: u32,
+}
+
 // https://github.com/sainnhe/everforest/blob/master/palette.md
 const EVERFOREST: &[(u8, u8, u8)] = &[
     (0x23, 0x2A, 0x2E),
@@ -83,7 +89,7 @@ pub fn encode_image(
     format: OutputFormat,
     quality: u8,
     accents: bool,
-) -> Result<(), String> {
+) -> Result<Conversion, String> {
     let started = Instant::now();
     let mut image = ImageReader::open(input)
         .map_err(|e| format!("{}: {e}", input.display()))?
@@ -91,6 +97,7 @@ pub fn encode_image(
         .map_err(|e| format!("{}: {e}", input.display()))?
         .to_rgba8();
     recolor(&mut image, accents);
+    let (width, height) = image.dimensions();
     let file = fs::OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -122,8 +129,11 @@ pub fn encode_image(
     writer
         .flush()
         .map_err(|e| format!("{}: {e}", temporary.display()))?;
-    eprintln!("converted {} in {:.2?}", input.display(), started.elapsed());
-    Ok(())
+    Ok(Conversion {
+        duration: started.elapsed(),
+        width,
+        height,
+    })
 }
 
 #[cfg(test)]

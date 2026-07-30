@@ -76,6 +76,21 @@ fn already_recolored(path: &Path) -> bool {
         .is_some_and(|stem| stem.ends_with(&format!("-{THEME}")))
 }
 
+fn human_size(bytes: u64) -> String {
+    const UNITS: [&str; 4] = ["B", "KiB", "MiB", "GiB"];
+    let mut value = bytes as f64;
+    let mut unit = 0;
+    while value >= 1024.0 && unit < UNITS.len() - 1 {
+        value /= 1024.0;
+        unit += 1;
+    }
+    if unit == 0 {
+        format!("{bytes} B")
+    } else {
+        format!("{value:.1} {}", UNITS[unit])
+    }
+}
+
 fn normalized(stem: &str) -> Result<String, String> {
     let mut output = String::new();
     let mut dash = false;
@@ -153,7 +168,17 @@ fn jobs(
     }
     paths.sort();
     paths.dedup();
-    paths.retain(|path| !already_recolored(path));
+    paths.retain(|path| {
+        if already_recolored(path) {
+            eprintln!(
+                "skipped {}: filename already ends with -{THEME}",
+                path.display()
+            );
+            false
+        } else {
+            true
+        }
+    });
     let mut outputs = HashSet::new();
     let mut jobs = Vec::new();
     for input in paths {
@@ -184,19 +209,37 @@ fn run(cli: Cli) -> Result<(), String> {
     }
     let quality = cli.quality.unwrap_or(DEFAULT_QUALITY);
     for job in jobs(&cli.input, cli.normalize_name, cli.format, cli.overwrite)? {
+        let input_size = fs::metadata(&job.input)
+            .map_err(|e| format!("{}: {e}", job.input.display()))?
+            .len();
         let temp = job.output.with_file_name(format!(
             ".{}.{}.tmp",
             job.output.file_name().unwrap().to_string_lossy(),
             process::id()
         ));
-        if let Err(error) =
-            recolor::encode_image(&job.input, &temp, cli.format, quality, cli.accents)
-        {
-            let _ = fs::remove_file(&temp);
-            return Err(error);
-        }
+        let conversion =
+            match recolor::encode_image(&job.input, &temp, cli.format, quality, cli.accents) {
+                Ok(conversion) => conversion,
+                Err(error) => {
+                    let _ = fs::remove_file(&temp);
+                    return Err(error);
+                }
+            };
         fs::rename(&temp, &job.output).map_err(|e| format!("{}: {e}", job.output.display()))?;
-        println!("{}", job.output.display());
+        let output_size = fs::metadata(&job.output)
+            .map_err(|e| format!("{}: {e}", job.output.display()))?
+            .len();
+        let change = (output_size as f64 / input_size as f64 - 1.0) * 100.0;
+        println!(
+            "{} -> {} | {}x{} | {} -> {} ({change:+.0}%) | {:.2?}",
+            job.input.display(),
+            job.output.display(),
+            conversion.width,
+            conversion.height,
+            human_size(input_size),
+            human_size(output_size),
+            conversion.duration,
+        );
     }
     Ok(())
 }
@@ -222,6 +265,13 @@ mod tests {
             normalized("é").unwrap_err(),
             "normalized output stem is empty: é"
         );
+    }
+
+    #[test]
+    fn formats_file_sizes() {
+        assert_eq!(human_size(999), "999 B");
+        assert_eq!(human_size(1024), "1.0 KiB");
+        assert_eq!(human_size(1_572_864), "1.5 MiB");
     }
     #[test]
     fn output_names() {
