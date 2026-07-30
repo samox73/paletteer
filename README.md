@@ -1,6 +1,6 @@
 # Paletteer
 
-![Paletteer banner](banner.jpg)
+![Paletteer banner](banner.png)
 
 Recolor PNG, JPEG and WEBP wallpapers with built-in or custom color palettes while preserving each pixel's source lightness.
 
