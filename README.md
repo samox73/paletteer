@@ -1,5 +1,7 @@
 # Paletteer
 
+![Paletteer banner](banner.jpg)
+
 Recolor PNG, JPEG and WEBP wallpapers with built-in or custom color palettes while preserving each pixel's source lightness.
 
 See [PALETTES.md](PALETTES.md) for the supported palette and its colors.
@@ -64,9 +66,11 @@ paletteer [OPTIONS] --theme <THEME> <INPUT>...
 | `-f`, `--format <FORMAT>` | Optional; `png` | Selects `png`, `webp`, or `jpg` output. PNG is lossless; JPEG discards alpha. | Choose lossless output, smaller WebP files, or broadly compatible JPEG files. |
 | `-q`, `--quality <1-100>` | Optional; `80` for WebP/JPEG | Sets lossy encoding quality. Using it with PNG is an error. | Trade output size for visual quality when writing WebP or JPEG. |
 | `-a`, `--accents` | Optional; off | Includes Everforest accent colors and adds `-accent` to the output filename. | Retain more colorful reds, oranges, yellows, greens, blues, and purples. |
+| `--mix <0-1>` | Optional; `1` | Blends the original and remapped Oklab color while preserving source lightness. Non-default values add `-mix-<value>` to the output filename. | Use `0` for the original colors, an intermediate value such as `0.5` for a subtler palette tint, or `1` for the full remap. |
 | `-o`, `--overwrite` | Optional; off | Replaces an existing output only after the new image encodes successfully. | Regenerate images without deleting old outputs manually. |
 | `-h`, `--help` | Optional | Prints the built-in CLI reference. | Check available arguments from the installed binary. |
 
 Quote recursive globs for consistent behavior across shells. Files whose names
 already end in `-everforest-dark-medium` or
-`-everforest-dark-medium-accent` are skipped to prevent repeat recoloring.
+`-everforest-dark-medium-accent` (optionally followed by `-mix-<value>`) are
+skipped to prevent repeat recoloring.
