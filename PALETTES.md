@@ -7,15 +7,19 @@ The color names and values below come from the [official Everforest palette](htt
 ## everforest-dark-medium
 
 <sub>backgrounds</sub>
+
 ![#232A2E][232A2E]![#2D353B][2D353B]![#343F44][343F44]![#3D484D][3D484D]![#475258][475258]![#4F585E][4F585E]![#56635F][56635F]
 
 <sub>foreground</sub>
+
 ![#D3C6AA][D3C6AA]
 
 <sub>accents</sub>
+
 ![#E67E80][E67E80]![#E69875][E69875]![#DBBC7F][DBBC7F]![#A7C080][A7C080]![#83C092][83C092]![#7FBBB3][7FBBB3]![#D699B6][D699B6]
 
 <sub>greys</sub>
+
 ![#7A8478][7A8478]![#859289][859289]![#9DA9A0][9DA9A0]
 
 | Group | Name | Hex |
