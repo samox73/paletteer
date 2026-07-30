@@ -31,6 +31,19 @@ Built-in themes: `everforest-dark-medium`, `catppuccin-mocha`, `tokyo-night`, `g
 <tr><td><img src="examples-400/DSC_2357.JPG" width="400" alt="Original DSC 2357"></td><td><img src="examples-400/dsc-2357-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2357"></td><td><img src="examples-400/dsc-2357-everforest-dark-medium-accent.jpg" width="400" alt="Everforest accent DSC 2357"></td></tr>
 </table>
 
+### Built-in palette comparison
+
+<table>
+<tr><th>Original</th><th>Everforest Dark Medium</th></tr>
+<tr><td><img src="examples-400/DSC_1657.JPG" width="400" alt="Original DSC 1657"></td><td><img src="examples-400/dsc-1657-everforest-dark-medium.jpg" width="400" alt="DSC 1657 recolored with Everforest Dark Medium"></td></tr>
+<tr><th>Catppuccin Mocha</th><th>Tokyo Night</th></tr>
+<tr><td><img src="examples-400/dsc-1657-catppuccin-mocha.jpg" width="400" alt="DSC 1657 recolored with Catppuccin Mocha"></td><td><img src="examples-400/dsc-1657-tokyo-night.jpg" width="400" alt="DSC 1657 recolored with Tokyo Night"></td></tr>
+<tr><th>Gruvbox Dark Medium</th><th>Nord</th></tr>
+<tr><td><img src="examples-400/dsc-1657-gruvbox-dark-medium.jpg" width="400" alt="DSC 1657 recolored with Gruvbox Dark Medium"></td><td><img src="examples-400/dsc-1657-nord.jpg" width="400" alt="DSC 1657 recolored with Nord"></td></tr>
+<tr><th>Dracula</th><th>Rosé Pine Moon</th></tr>
+<tr><td><img src="examples-400/dsc-1657-dracula.jpg" width="400" alt="DSC 1657 recolored with Dracula"></td><td><img src="examples-400/dsc-1657-rose-pine-moon.jpg" width="400" alt="DSC 1657 recolored with Rosé Pine Moon"></td></tr>
+</table>
+
 ## Installation
 
 ```sh
