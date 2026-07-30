@@ -84,10 +84,30 @@ struct Cli {
     quality: Option<u8>,
     #[arg(short = 'a', long, help = "Include palette accent colors")]
     accents: bool,
+    #[arg(
+        long,
+        default_value_t = 1.0,
+        value_parser = parse_mix,
+        help = "Blend original and remapped colors (0 = original, 1 = fully remapped)"
+    )]
+    mix: f32,
     #[arg(short = 'o', long, help = "Replace existing output files")]
     overwrite: bool,
     #[arg(required = true)]
     input: Vec<PathBuf>,
+}
+
+fn parse_mix(value: &str) -> Result<f32, String> {
+    let mix = value
+        .parse::<f32>()
+        .map_err(|_| format!("invalid mix value '{value}': expected a number from 0 to 1"))?;
+    if mix.is_finite() && (0.0..=1.0).contains(&mix) {
+        Ok(if mix == 0.0 { 0.0 } else { mix })
+    } else {
+        Err(format!(
+            "invalid mix value '{value}': expected a number from 0 to 1"
+        ))
+    }
 }
 
 struct Job {
@@ -109,6 +129,7 @@ fn already_recolored(path: &Path) -> bool {
     path.file_stem()
         .and_then(|stem| stem.to_str())
         .is_some_and(|stem| {
+            let stem = stem.rsplit_once("-mix-").map_or(stem, |(base, _mix)| base);
             THEME_NAMES.iter().any(|theme| {
                 stem.ends_with(&format!("-{theme}")) || stem.ends_with(&format!("-{theme}-accent"))
             })
@@ -156,16 +177,19 @@ fn output_path(
     format: OutputFormat,
     theme: Theme,
     accents: bool,
+    mix: f32,
 ) -> Result<PathBuf, String> {
     let stem = input
         .file_stem()
         .and_then(|s| s.to_str())
         .ok_or_else(|| format!("invalid input name: {}", input.display()))?;
-    let stem = format!(
-        "{stem}-{}{}",
-        theme.name(),
-        if accents { "-accent" } else { "" }
-    );
+    let accent_suffix = if accents { "-accent" } else { "" };
+    let mix_suffix = if mix == 1.0 {
+        String::new()
+    } else {
+        format!("-mix-{mix}")
+    };
+    let stem = format!("{stem}-{}{accent_suffix}{mix_suffix}", theme.name());
     let name = if normalize_name {
         normalized(&stem)?
     } else {
@@ -208,6 +232,7 @@ fn jobs(
     overwrite: bool,
     theme: Theme,
     accents: bool,
+    mix: f32,
 ) -> Result<Vec<Job>, String> {
     let mut paths = Vec::new();
     for input in inputs {
@@ -235,7 +260,7 @@ fn jobs(
         if !supported(&input) {
             return Err(format!("unsupported file: {}", input.display()));
         }
-        let output = output_path(&input, normalize_name, format, theme, accents)?;
+        let output = output_path(&input, normalize_name, format, theme, accents, mix)?;
         if !outputs.insert(output.clone()) {
             return Err(format!(
                 "inputs resolve to the same output: {}",
@@ -262,6 +287,7 @@ fn run(cli: Cli) -> Result<(), String> {
         cli.overwrite,
         cli.theme,
         cli.accents,
+        cli.mix,
     )? {
         let input_size = fs::metadata(&job.input)
             .map_err(|e| format!("{}: {e}", job.input.display()))?
@@ -278,6 +304,7 @@ fn run(cli: Cli) -> Result<(), String> {
             quality,
             cli.theme,
             cli.accents,
+            cli.mix,
         ) {
             Ok(conversion) => conversion,
             Err(error) => {
@@ -351,6 +378,7 @@ mod tests {
                 OutputFormat::Png,
                 Theme::EverforestDarkMedium,
                 false,
+                1.0,
             )
             .unwrap(),
             PathBuf::from("Misty Forest (Final)-everforest-dark-medium.png")
@@ -362,6 +390,7 @@ mod tests {
                 OutputFormat::Webp,
                 Theme::EverforestDarkMedium,
                 false,
+                1.0,
             )
             .unwrap(),
             PathBuf::from("foo-bar-everforest-dark-medium.webp")
@@ -373,11 +402,47 @@ mod tests {
                 OutputFormat::Jpg,
                 Theme::EverforestDarkMedium,
                 true,
+                1.0,
             )
             .unwrap(),
             PathBuf::from("foo-everforest-dark-medium-accent.jpg")
         );
+        assert_eq!(
+            output_path(
+                Path::new("foo.jpg"),
+                false,
+                OutputFormat::Jpg,
+                Theme::EverforestDarkMedium,
+                false,
+                0.5,
+            )
+            .unwrap(),
+            PathBuf::from("foo-everforest-dark-medium-mix-0.5.jpg")
+        );
+        assert_eq!(
+            output_path(
+                Path::new("foo.jpg"),
+                true,
+                OutputFormat::Jpg,
+                Theme::EverforestDarkMedium,
+                true,
+                0.5,
+            )
+            .unwrap(),
+            PathBuf::from("foo-everforest-dark-medium-accent-mix-0-5.jpg")
+        );
     }
+
+    #[test]
+    fn mix_validation() {
+        assert_eq!(parse_mix("0").unwrap(), 0.0);
+        assert_eq!(parse_mix("0.5").unwrap(), 0.5);
+        assert_eq!(parse_mix("1").unwrap(), 1.0);
+        for invalid in ["-0.1", "1.1", "NaN", "inf", "nope"] {
+            assert!(parse_mix(invalid).is_err());
+        }
+    }
+
     #[test]
     fn duplicate_outputs_are_rejected() {
         let directory = std::env::temp_dir().join(format!("paletteer-test-{}", process::id()));
@@ -394,6 +459,7 @@ mod tests {
                 false,
                 Theme::EverforestDarkMedium,
                 false,
+                1.0,
             )
             .is_err()
         );
@@ -416,6 +482,7 @@ mod tests {
                 false,
                 Theme::EverforestDarkMedium,
                 false,
+                1.0,
             )
             .is_err()
         );
@@ -427,6 +494,7 @@ mod tests {
                 true,
                 Theme::EverforestDarkMedium,
                 false,
+                1.0,
             )
             .is_ok()
         );
@@ -438,7 +506,7 @@ mod tests {
         let directory = std::env::temp_dir().join(format!("paletteer-skip-test-{}", process::id()));
         fs::create_dir_all(&directory).unwrap();
         let original = directory.join("mountain.jpg");
-        let prior_output = directory.join("mountain-everforest-dark-medium.jpg");
+        let prior_output = directory.join("mountain-everforest-dark-medium-mix-0-5.jpg");
         fs::File::create(&original).unwrap();
         fs::File::create(&prior_output).unwrap();
         let jobs = jobs(
@@ -448,6 +516,7 @@ mod tests {
             false,
             Theme::EverforestDarkMedium,
             false,
+            1.0,
         )
         .unwrap();
         assert_eq!(jobs.len(), 1);

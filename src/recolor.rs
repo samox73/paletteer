@@ -125,7 +125,10 @@ fn nearest(color: Oklab, colors: &[Oklab]) -> Oklab {
         .expect("palette is not empty")
 }
 
-pub fn recolor(image: &mut RgbaImage, theme: Theme, accents: bool) {
+pub fn recolor(image: &mut RgbaImage, theme: Theme, accents: bool, mix: f32) {
+    if mix == 0.0 {
+        return;
+    }
     let colors = palette_labs(theme, accents);
     image.as_mut().par_chunks_exact_mut(4).for_each(|pixel| {
         if pixel[3] == 0 {
@@ -137,7 +140,12 @@ pub fn recolor(image: &mut RgbaImage, theme: Theme, accents: bool) {
             pixel[2] as f32 / 255.0,
         ));
         let selected = nearest(original, &colors);
-        let rgb: Srgb = Srgb::from_color(Oklab::new(original.l, selected.a, selected.b));
+        let remapped = Oklab::new(
+            original.l,
+            original.a + mix * (selected.a - original.a),
+            original.b + mix * (selected.b - original.b),
+        );
+        let rgb: Srgb = Srgb::from_color(remapped);
         let (r, g, b) = rgb.into_components();
         pixel[0] = (r.clamp(0.0, 1.0) * 255.0).round() as u8;
         pixel[1] = (g.clamp(0.0, 1.0) * 255.0).round() as u8;
@@ -152,6 +160,7 @@ pub fn encode_image(
     quality: u8,
     theme: Theme,
     accents: bool,
+    mix: f32,
 ) -> Result<Conversion, String> {
     let started = Instant::now();
     let mut image = ImageReader::open(input)
@@ -159,7 +168,7 @@ pub fn encode_image(
         .decode()
         .map_err(|e| format!("{}: {e}", input.display()))?
         .to_rgba8();
-    recolor(&mut image, theme, accents);
+    recolor(&mut image, theme, accents, mix);
     let (width, height) = image.dimensions();
     let file = fs::OpenOptions::new()
         .write(true)
@@ -240,7 +249,7 @@ mod tests {
         for (x, _, pixel) in image.enumerate_pixels_mut() {
             *pixel = image::Rgba([x as u8, x as u8, x as u8, x as u8]);
         }
-        recolor(&mut image, Theme::EverforestDarkMedium, false);
+        recolor(&mut image, Theme::EverforestDarkMedium, false, 1.0);
         assert!(
             image
                 .pixels()
@@ -252,6 +261,26 @@ mod tests {
         for (x, _, pixel) in image.enumerate_pixels() {
             assert_eq!(pixel[3], x as u8);
         }
+    }
+
+    #[test]
+    fn mix_endpoints_and_midpoint() {
+        let original = RgbaImage::from_pixel(1, 1, image::Rgba([220, 40, 30, 128]));
+
+        let mut unchanged = original.clone();
+        recolor(&mut unchanged, Theme::EverforestDarkMedium, false, 0.0);
+        assert_eq!(unchanged, original);
+
+        let mut midpoint = original.clone();
+        recolor(&mut midpoint, Theme::EverforestDarkMedium, false, 0.5);
+
+        let mut remapped = original.clone();
+        recolor(&mut remapped, Theme::EverforestDarkMedium, false, 1.0);
+
+        assert_ne!(midpoint, original);
+        assert_ne!(midpoint, remapped);
+        assert_eq!(midpoint.get_pixel(0, 0)[3], 128);
+        assert_eq!(remapped.get_pixel(0, 0)[3], 128);
     }
 
     #[test]
@@ -272,6 +301,7 @@ mod tests {
                 80,
                 Theme::EverforestDarkMedium,
                 false,
+                1.0,
             )
             .unwrap();
             assert_eq!(image::open(output).unwrap().dimensions(), (1, 1));
