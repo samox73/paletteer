@@ -16,6 +16,20 @@ The color names and values below come from the [official Everforest palette](htt
 
 Neutral colors are used by default. Accents require `--accents` / `-a`.
 
+## Custom palette files
+
+Custom palettes use TOML:
+
+```toml
+name = "forest-dusk"
+colors = ["#1b2428", "#556b62", "#d8c9aa"]
+accents = ["#e67e80", "#a7c080", "#7fbbb3"]
+```
+
+`name` must contain only `a-z`, `0-9`, and single hyphens. `colors` is a
+non-empty array of `#RRGGBB` strings. `accents` is optional and is enabled
+with `--accents`.
+
 ## everforest-dark-medium
 
 <sub>backgrounds</sub>

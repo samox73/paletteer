@@ -72,10 +72,18 @@ impl OutputFormat {
 }
 
 #[derive(Parser)]
-#[command(name = "paletteer", about = "Recolor images with built-in palettes")]
+#[command(
+    name = "paletteer",
+    about = "Recolor images with built-in or custom palettes",
+    group = clap::ArgGroup::new("theme-source")
+        .required(true)
+        .args(["theme", "theme_file"])
+)]
 struct Cli {
     #[arg(short, long, value_enum)]
-    theme: Theme,
+    theme: Option<Theme>,
+    #[arg(long, value_name = "FILE")]
+    theme_file: Option<PathBuf>,
     #[arg(short = 'n', long)]
     normalize_name: bool,
     #[arg(short = 'f', long, value_enum, default_value_t = OutputFormat::Png)]
@@ -97,6 +105,17 @@ struct Cli {
     input: Vec<PathBuf>,
 }
 
+struct SelectedPalette {
+    name: String,
+    colors: Vec<u32>,
+}
+
+struct CustomPalette {
+    name: String,
+    colors: Vec<u32>,
+    accents: Vec<u32>,
+}
+
 fn parse_mix(value: &str) -> Result<f32, String> {
     let mix = value
         .parse::<f32>()
@@ -108,6 +127,84 @@ fn parse_mix(value: &str) -> Result<f32, String> {
             "invalid mix value '{value}': expected a number from 0 to 1"
         ))
     }
+}
+
+fn parse_colors(document: &toml::Table, field: &str, required: bool) -> Result<Vec<u32>, String> {
+    let Some(values) = document.get(field) else {
+        return if required {
+            Err(format!("missing required '{field}' array"))
+        } else {
+            Ok(Vec::new())
+        };
+    };
+    let values = values
+        .as_array()
+        .ok_or_else(|| format!("'{field}' must be an array of hex color strings"))?;
+    if required && values.is_empty() {
+        return Err(format!("'{field}' must contain at least one color"));
+    }
+    values
+        .iter()
+        .enumerate()
+        .map(|(index, value)| {
+            let value = value
+                .as_str()
+                .ok_or_else(|| format!("'{field}[{index}]' must be a hex color string"))?;
+            let Some(hex) = value.strip_prefix('#').filter(|hex| hex.len() == 6) else {
+                return Err(format!(
+                    "invalid color '{value}' in '{field}[{index}]': expected #RRGGBB"
+                ));
+            };
+            u32::from_str_radix(hex, 16).map_err(|_| {
+                format!("invalid color '{value}' in '{field}[{index}]': expected #RRGGBB")
+            })
+        })
+        .collect()
+}
+
+fn parse_custom_palette(text: &str) -> Result<CustomPalette, String> {
+    let document = text
+        .parse::<toml::Table>()
+        .map_err(|error| error.to_string())?;
+    if let Some(field) = document
+        .keys()
+        .find(|field| !matches!(field.as_str(), "name" | "colors" | "accents"))
+    {
+        return Err(format!("unknown palette field '{field}'"));
+    }
+    let name = document
+        .get("name")
+        .and_then(toml::Value::as_str)
+        .ok_or_else(|| "missing required string 'name'".to_owned())?;
+    if normalized(name).ok().as_deref() != Some(name) {
+        return Err("'name' must contain only a-z, 0-9, and single hyphens".to_owned());
+    }
+    Ok(CustomPalette {
+        name: name.to_owned(),
+        colors: parse_colors(&document, "colors", true)?,
+        accents: parse_colors(&document, "accents", false)?,
+    })
+}
+
+fn select_palette(cli: &Cli) -> Result<SelectedPalette, String> {
+    if let Some(path) = &cli.theme_file {
+        let text =
+            fs::read_to_string(path).map_err(|error| format!("{}: {error}", path.display()))?;
+        let mut palette =
+            parse_custom_palette(&text).map_err(|error| format!("{}: {error}", path.display()))?;
+        if cli.accents {
+            palette.colors.extend(palette.accents);
+        }
+        return Ok(SelectedPalette {
+            name: palette.name,
+            colors: palette.colors,
+        });
+    }
+    let theme = cli.theme.expect("clap requires a theme or palette");
+    Ok(SelectedPalette {
+        name: theme.name().to_owned(),
+        colors: recolor::built_in_colors(theme, cli.accents),
+    })
 }
 
 struct Job {
@@ -125,14 +222,19 @@ fn supported(path: &Path) -> bool {
     )
 }
 
-fn already_recolored(path: &Path) -> bool {
+fn already_recolored(path: &Path, palette_name: &str) -> bool {
     path.file_stem()
         .and_then(|stem| stem.to_str())
         .is_some_and(|stem| {
             let stem = stem.rsplit_once("-mix-").map_or(stem, |(base, _mix)| base);
-            THEME_NAMES.iter().any(|theme| {
-                stem.ends_with(&format!("-{theme}")) || stem.ends_with(&format!("-{theme}-accent"))
-            })
+            THEME_NAMES
+                .iter()
+                .copied()
+                .chain(std::iter::once(palette_name))
+                .any(|theme| {
+                    stem.ends_with(&format!("-{theme}"))
+                        || stem.ends_with(&format!("-{theme}-accent"))
+                })
         })
 }
 
@@ -175,7 +277,7 @@ fn output_path(
     input: &Path,
     normalize_name: bool,
     format: OutputFormat,
-    theme: Theme,
+    palette_name: &str,
     accents: bool,
     mix: f32,
 ) -> Result<PathBuf, String> {
@@ -189,7 +291,7 @@ fn output_path(
     } else {
         format!("-mix-{mix}")
     };
-    let stem = format!("{stem}-{}{accent_suffix}{mix_suffix}", theme.name());
+    let stem = format!("{stem}-{palette_name}{accent_suffix}{mix_suffix}");
     let name = if normalize_name {
         normalized(&stem)?
     } else {
@@ -230,7 +332,7 @@ fn jobs(
     normalize_name: bool,
     format: OutputFormat,
     overwrite: bool,
-    theme: Theme,
+    palette_name: &str,
     accents: bool,
     mix: f32,
 ) -> Result<Vec<Job>, String> {
@@ -241,7 +343,7 @@ fn jobs(
     paths.sort();
     paths.dedup();
     paths.retain(|path| {
-        if already_recolored(path) {
+        if already_recolored(path, palette_name) {
             eprintln!(
                 "skipped {}: filename already has a paletteer suffix",
                 path.display()
@@ -260,7 +362,7 @@ fn jobs(
         if !supported(&input) {
             return Err(format!("unsupported file: {}", input.display()));
         }
-        let output = output_path(&input, normalize_name, format, theme, accents, mix)?;
+        let output = output_path(&input, normalize_name, format, palette_name, accents, mix)?;
         if !outputs.insert(output.clone()) {
             return Err(format!(
                 "inputs resolve to the same output: {}",
@@ -280,12 +382,13 @@ fn run(cli: Cli) -> Result<(), String> {
         return Err("--quality is only valid with --format webp or jpg".to_owned());
     }
     let quality = cli.quality.unwrap_or(DEFAULT_QUALITY);
+    let palette = select_palette(&cli)?;
     for job in jobs(
         &cli.input,
         cli.normalize_name,
         cli.format,
         cli.overwrite,
-        cli.theme,
+        &palette.name,
         cli.accents,
         cli.mix,
     )? {
@@ -302,8 +405,7 @@ fn run(cli: Cli) -> Result<(), String> {
             &temp,
             cli.format,
             quality,
-            cli.theme,
-            cli.accents,
+            &palette.colors,
             cli.mix,
         ) {
             Ok(conversion) => conversion,
@@ -376,7 +478,7 @@ mod tests {
                 Path::new("Misty Forest (Final).jpg"),
                 false,
                 OutputFormat::Png,
-                Theme::EverforestDarkMedium,
+                "everforest-dark-medium",
                 false,
                 1.0,
             )
@@ -388,7 +490,7 @@ mod tests {
                 Path::new("foo.bar.png"),
                 true,
                 OutputFormat::Webp,
-                Theme::EverforestDarkMedium,
+                "everforest-dark-medium",
                 false,
                 1.0,
             )
@@ -400,7 +502,7 @@ mod tests {
                 Path::new("foo.jpg"),
                 false,
                 OutputFormat::Jpg,
-                Theme::EverforestDarkMedium,
+                "everforest-dark-medium",
                 true,
                 1.0,
             )
@@ -412,7 +514,7 @@ mod tests {
                 Path::new("foo.jpg"),
                 false,
                 OutputFormat::Jpg,
-                Theme::EverforestDarkMedium,
+                "everforest-dark-medium",
                 false,
                 0.5,
             )
@@ -424,7 +526,7 @@ mod tests {
                 Path::new("foo.jpg"),
                 true,
                 OutputFormat::Jpg,
-                Theme::EverforestDarkMedium,
+                "everforest-dark-medium",
                 true,
                 0.5,
             )
@@ -444,6 +546,52 @@ mod tests {
     }
 
     #[test]
+    fn custom_palette_parsing() {
+        let palette = parse_custom_palette(
+            r##"
+name = "forest-dusk"
+colors = ["#112233", "#AABBCC"]
+accents = ["#ff8800"]
+"##,
+        )
+        .unwrap();
+        assert_eq!(palette.name, "forest-dusk");
+        assert_eq!(palette.colors, [0x112233, 0xAABBCC]);
+        assert_eq!(palette.accents, [0xFF8800]);
+
+        for invalid in [
+            "name = 'Bad Name'\ncolors = ['#112233']",
+            "name = 'empty'\ncolors = []",
+            "name = 'bad-color'\ncolors = ['#12345']",
+            "name = 'typo'\ncolours = ['#112233']",
+        ] {
+            assert!(parse_custom_palette(invalid).is_err());
+        }
+    }
+
+    #[test]
+    fn palette_source_is_required_and_exclusive() {
+        assert!(Cli::try_parse_from(["paletteer", "image.jpg"]).is_err());
+        assert!(
+            Cli::try_parse_from([
+                "paletteer",
+                "--theme",
+                "nord",
+                "--theme-file",
+                "custom.toml",
+                "image.jpg",
+            ])
+            .is_err()
+        );
+        assert!(
+            Cli::try_parse_from(["paletteer", "--theme", "nord", "image.jpg"])
+                .unwrap()
+                .theme_file
+                .is_none()
+        );
+    }
+
+    #[test]
     fn duplicate_outputs_are_rejected() {
         let directory = std::env::temp_dir().join(format!("paletteer-test-{}", process::id()));
         fs::create_dir_all(&directory).unwrap();
@@ -457,7 +605,7 @@ mod tests {
                 false,
                 OutputFormat::Png,
                 false,
-                Theme::EverforestDarkMedium,
+                "everforest-dark-medium",
                 false,
                 1.0,
             )
@@ -480,7 +628,7 @@ mod tests {
                 false,
                 OutputFormat::Png,
                 false,
-                Theme::EverforestDarkMedium,
+                "everforest-dark-medium",
                 false,
                 1.0,
             )
@@ -492,7 +640,7 @@ mod tests {
                 false,
                 OutputFormat::Png,
                 true,
-                Theme::EverforestDarkMedium,
+                "everforest-dark-medium",
                 false,
                 1.0,
             )
@@ -514,7 +662,7 @@ mod tests {
             false,
             OutputFormat::Webp,
             false,
-            Theme::EverforestDarkMedium,
+            "everforest-dark-medium",
             false,
             1.0,
         )

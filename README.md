@@ -55,25 +55,45 @@ cargo install --path .
 ## Usage
 
 ```text
-paletteer [OPTIONS] --theme <THEME> <INPUT>...
+paletteer [OPTIONS] <--theme <THEME>|--theme-file <FILE>> <INPUT>...
 ```
 
 | Argument | Required / default | Effect | Use case |
 | --- | --- | --- | --- |
 | `<INPUT>...` | Required; one or more | Recolors PNG, JPG, JPEG, or WebP files. Accepts individual files, directories, and expanded or quoted globs. Directories include immediate supported files only. | Process one image, batch a folder, or select files recursively with a quoted glob such as `'**/*-forest.jpg'`. |
-| `-t`, `--theme <THEME>` | Required; currently `everforest-dark-medium` | Selects the target color palette. | Choose the palette applied to every input. |
+| `-t`, `--theme <THEME>` | No default; required unless `--theme-file` is used | Selects one of the built-in color palettes. | Use a bundled palette without maintaining a separate file. |
+| `--theme-file <FILE>` | No default; required unless `--theme` is used | Loads a custom TOML palette. Cannot be combined with `--theme`. | Recolor with your own base and accent colors. |
 | `-n`, `--normalize-name` | Optional; off | Lowercases the generated output stem and restricts it to `a-z`, `0-9`, and `-`. | Produce predictable, shell-friendly filenames from names containing spaces, punctuation, or uppercase characters. |
 | `-f`, `--format <FORMAT>` | Optional; `png` | Selects `png`, `webp`, or `jpg` output. PNG is lossless; JPEG discards alpha. | Choose lossless output, smaller WebP files, or broadly compatible JPEG files. |
 | `-q`, `--quality <1-100>` | Optional; `80` for WebP/JPEG | Sets lossy encoding quality. Using it with PNG is an error. | Trade output size for visual quality when writing WebP or JPEG. |
-| `-a`, `--accents` | Optional; off | Includes Everforest accent colors and adds `-accent` to the output filename. | Retain more colorful reds, oranges, yellows, greens, blues, and purples. |
+| `-a`, `--accents` | Optional; off | Includes the palette's accent colors and adds `-accent` to the output filename. | Retain more colorful reds, oranges, yellows, greens, blues, and purples. |
 | `--mix <0-1>` | Optional; `1` | Blends the original and remapped Oklab color while preserving source lightness. Non-default values add `-mix-<value>` to the output filename. | Use `0` for the original colors, an intermediate value such as `0.5` for a subtler palette tint, or `1` for the full remap. |
 | `-o`, `--overwrite` | Optional; off | Replaces an existing output only after the new image encodes successfully. | Regenerate images without deleting old outputs manually. |
 | `-h`, `--help` | Optional | Prints the built-in CLI reference. | Check available arguments from the installed binary. |
 
+## Custom palettes
+
+Pass a TOML file with `--theme-file`:
+
+```toml
+name = "forest-dusk"
+colors = ["#1b2428", "#556b62", "#d8c9aa"]
+accents = ["#e67e80", "#a7c080", "#7fbbb3"]
+```
+
+`name` becomes the output filename suffix and must contain only lowercase
+letters, digits, and single hyphens. `colors` must contain at least one
+`#RRGGBB` color. `accents` is optional and participates only with
+`--accents`.
+
+```sh
+paletteer --theme-file examples/forest-dusk.toml --mix 0.9 wallpaper.jpg
+```
+
 Quote recursive globs for consistent behavior across shells. Files whose names
-already end in `-everforest-dark-medium` or
-`-everforest-dark-medium-accent` (optionally followed by `-mix-<value>`) are
-skipped to prevent repeat recoloring.
+already carry a built-in or currently selected custom palette suffix
+(optionally followed by `-accent` and `-mix-<value>`) are skipped to prevent
+repeat recoloring.
 
 ## Acknoledgements
 

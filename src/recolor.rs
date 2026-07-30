@@ -97,12 +97,19 @@ fn palette(theme: Theme) -> &'static ThemePalette {
     }
 }
 
-fn palette_labs(theme: Theme, accents: bool) -> Vec<Oklab> {
+pub fn built_in_colors(theme: Theme, accents: bool) -> Vec<u32> {
     let palette = palette(theme);
     palette
         .neutral
         .iter()
         .chain(if accents { palette.accents } else { &[] })
+        .copied()
+        .collect()
+}
+
+fn palette_labs(colors: &[u32]) -> Vec<Oklab> {
+    colors
+        .iter()
         .map(|&color| {
             Oklab::from_color(Srgb::new(
                 ((color >> 16) & 0xFF) as f32 / 255.0,
@@ -125,11 +132,11 @@ fn nearest(color: Oklab, colors: &[Oklab]) -> Oklab {
         .expect("palette is not empty")
 }
 
-pub fn recolor(image: &mut RgbaImage, theme: Theme, accents: bool, mix: f32) {
+pub fn recolor(image: &mut RgbaImage, colors: &[u32], mix: f32) {
     if mix == 0.0 {
         return;
     }
-    let colors = palette_labs(theme, accents);
+    let colors = palette_labs(colors);
     image.as_mut().par_chunks_exact_mut(4).for_each(|pixel| {
         if pixel[3] == 0 {
             return;
@@ -158,8 +165,7 @@ pub fn encode_image(
     temporary: &Path,
     format: OutputFormat,
     quality: u8,
-    theme: Theme,
-    accents: bool,
+    colors: &[u32],
     mix: f32,
 ) -> Result<Conversion, String> {
     let started = Instant::now();
@@ -168,7 +174,7 @@ pub fn encode_image(
         .decode()
         .map_err(|e| format!("{}: {e}", input.display()))?
         .to_rgba8();
-    recolor(&mut image, theme, accents, mix);
+    recolor(&mut image, colors, mix);
     let (width, height) = image.dimensions();
     let file = fs::OpenOptions::new()
         .write(true)
@@ -221,9 +227,12 @@ mod tests {
 
     #[test]
     fn accents_are_opt_in() {
-        assert_eq!(palette_labs(Theme::EverforestDarkMedium, false).len(), 11);
         assert_eq!(
-            palette_labs(Theme::EverforestDarkMedium, true).len(),
+            built_in_colors(Theme::EverforestDarkMedium, false).len(),
+            11
+        );
+        assert_eq!(
+            built_in_colors(Theme::EverforestDarkMedium, true).len(),
             EVERFOREST.neutral.len() + EVERFOREST.accents.len()
         );
     }
@@ -239,7 +248,7 @@ mod tests {
             Theme::Dracula,
             Theme::RosePineMoon,
         ] {
-            assert!(!palette_labs(theme, false).is_empty());
+            assert!(!built_in_colors(theme, false).is_empty());
         }
     }
 
@@ -249,7 +258,11 @@ mod tests {
         for (x, _, pixel) in image.enumerate_pixels_mut() {
             *pixel = image::Rgba([x as u8, x as u8, x as u8, x as u8]);
         }
-        recolor(&mut image, Theme::EverforestDarkMedium, false, 1.0);
+        recolor(
+            &mut image,
+            &built_in_colors(Theme::EverforestDarkMedium, false),
+            1.0,
+        );
         assert!(
             image
                 .pixels()
@@ -266,16 +279,17 @@ mod tests {
     #[test]
     fn mix_endpoints_and_midpoint() {
         let original = RgbaImage::from_pixel(1, 1, image::Rgba([220, 40, 30, 128]));
+        let colors = built_in_colors(Theme::EverforestDarkMedium, false);
 
         let mut unchanged = original.clone();
-        recolor(&mut unchanged, Theme::EverforestDarkMedium, false, 0.0);
+        recolor(&mut unchanged, &colors, 0.0);
         assert_eq!(unchanged, original);
 
         let mut midpoint = original.clone();
-        recolor(&mut midpoint, Theme::EverforestDarkMedium, false, 0.5);
+        recolor(&mut midpoint, &colors, 0.5);
 
         let mut remapped = original.clone();
-        recolor(&mut remapped, Theme::EverforestDarkMedium, false, 1.0);
+        recolor(&mut remapped, &colors, 1.0);
 
         assert_ne!(midpoint, original);
         assert_ne!(midpoint, remapped);
@@ -292,18 +306,10 @@ mod tests {
         RgbaImage::from_pixel(1, 1, image::Rgba([10, 20, 30, 128]))
             .save(&input)
             .unwrap();
+        let colors = built_in_colors(Theme::EverforestDarkMedium, false);
         for (format, extension) in [(OutputFormat::Webp, "webp"), (OutputFormat::Jpg, "jpg")] {
             let output = directory.join(format!("output.{extension}"));
-            encode_image(
-                &input,
-                &output,
-                format,
-                80,
-                Theme::EverforestDarkMedium,
-                false,
-                1.0,
-            )
-            .unwrap();
+            encode_image(&input, &output, format, 80, &colors, 1.0).unwrap();
             assert_eq!(image::open(output).unwrap().dimensions(), (1, 1));
         }
         std::fs::remove_dir_all(directory).unwrap();

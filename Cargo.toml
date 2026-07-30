@@ -9,4 +9,5 @@ glob = "0.3"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
 palette = "0.7"
 rayon = "1"
+toml = { version = "1.1", default-features = false, features = ["parse", "serde"] }
 webp = "0.3"
