@@ -2,6 +2,8 @@
 
 Recolor PNG and JPEG wallpapers with the built-in `everforest-dark-medium` palette while preserving each pixel's source lightness. Outputs are written beside their inputs and never overwrite an existing file.
 
+See [PALETTES.md](PALETTES.md) for the supported palette and its colors.
+
 ```sh
 cargo install --path .
 paletteer -t everforest-dark-medium wallpaper.jpg
