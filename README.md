@@ -4,6 +4,8 @@ Recolor PNG, JPEG and WEBP wallpapers with built-in or custom color palettes whi
 
 See [PALETTES.md](PALETTES.md) for the supported palette and its colors.
 
+Built-in themes: `everforest-dark-medium`, `catppuccin-mocha`, `tokyo-night`, `gruvbox-dark-medium`, `nord`, `dracula`, and `rose-pine-moon`.
+
 ## Examples
 
 <table>
@@ -43,7 +45,7 @@ paletteer [OPTIONS] --theme <THEME> <INPUT>...
 
 | Argument | Required / default | Effect | Use case |
 | --- | --- | --- | --- |
-| `<INPUT>...` | Required; one or more | Recolors PNG, JPG, or JPEG files. Accepts individual files, directories, and expanded or quoted globs. Directories include immediate supported files only. | Process one image, batch a folder, or select files recursively with a quoted glob such as `'**/*-forest.jpg'`. |
+| `<INPUT>...` | Required; one or more | Recolors PNG, JPG, JPEG, or WebP files. Accepts individual files, directories, and expanded or quoted globs. Directories include immediate supported files only. | Process one image, batch a folder, or select files recursively with a quoted glob such as `'**/*-forest.jpg'`. |
 | `-t`, `--theme <THEME>` | Required; currently `everforest-dark-medium` | Selects the target color palette. | Choose the palette applied to every input. |
 | `-n`, `--normalize-name` | Optional; off | Lowercases the generated output stem and restricts it to `a-z`, `0-9`, and `-`. | Produce predictable, shell-friendly filenames from names containing spaces, punctuation, or uppercase characters. |
 | `-f`, `--format <FORMAT>` | Optional; `png` | Selects `png`, `webp`, or `jpg` output. PNG is lossless; JPEG discards alpha. | Choose lossless output, smaller WebP files, or broadly compatible JPEG files. |

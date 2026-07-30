@@ -9,10 +9,46 @@ use std::{
     process,
 };
 
-const THEME: &str = "everforest-dark-medium";
-const THEME_SUFFIX: &str = "-everforest-dark-medium";
-const ACCENT_SUFFIX: &str = "-everforest-dark-medium-accent";
 const DEFAULT_QUALITY: u8 = 80;
+const THEME_NAMES: &[&str] = &[
+    "everforest-dark-medium",
+    "catppuccin-mocha",
+    "tokyo-night",
+    "gruvbox-dark-medium",
+    "nord",
+    "dracula",
+    "rose-pine-moon",
+];
+
+#[derive(Clone, Copy, ValueEnum)]
+pub enum Theme {
+    #[value(name = "everforest-dark-medium")]
+    EverforestDarkMedium,
+    #[value(name = "catppuccin-mocha")]
+    CatppuccinMocha,
+    #[value(name = "tokyo-night")]
+    TokyoNight,
+    #[value(name = "gruvbox-dark-medium")]
+    GruvboxDarkMedium,
+    Nord,
+    Dracula,
+    #[value(name = "rose-pine-moon")]
+    RosePineMoon,
+}
+
+impl Theme {
+    fn name(self) -> &'static str {
+        match self {
+            Self::EverforestDarkMedium => "everforest-dark-medium",
+            Self::CatppuccinMocha => "catppuccin-mocha",
+            Self::TokyoNight => "tokyo-night",
+            Self::GruvboxDarkMedium => "gruvbox-dark-medium",
+            Self::Nord => "nord",
+            Self::Dracula => "dracula",
+            Self::RosePineMoon => "rose-pine-moon",
+        }
+    }
+}
 
 #[derive(Clone, Copy, ValueEnum)]
 pub enum OutputFormat {
@@ -36,13 +72,10 @@ impl OutputFormat {
 }
 
 #[derive(Parser)]
-#[command(
-    name = "paletteer",
-    about = "Recolor images with an Everforest palette"
-)]
+#[command(name = "paletteer", about = "Recolor images with built-in palettes")]
 struct Cli {
-    #[arg(short, long, value_parser = [THEME])]
-    theme: String,
+    #[arg(short, long, value_enum)]
+    theme: Theme,
     #[arg(short = 'n', long)]
     normalize_name: bool,
     #[arg(short = 'f', long, value_enum, default_value_t = OutputFormat::Png)]
@@ -68,14 +101,18 @@ fn supported(path: &Path) -> bool {
             .and_then(|s| s.to_str())
             .map(|s| s.to_ascii_lowercase())
             .as_deref(),
-        Some("png" | "jpg" | "jpeg")
+        Some("png" | "jpg" | "jpeg" | "webp")
     )
 }
 
 fn already_recolored(path: &Path) -> bool {
     path.file_stem()
         .and_then(|stem| stem.to_str())
-        .is_some_and(|stem| stem.ends_with(THEME_SUFFIX) || stem.ends_with(ACCENT_SUFFIX))
+        .is_some_and(|stem| {
+            THEME_NAMES.iter().any(|theme| {
+                stem.ends_with(&format!("-{theme}")) || stem.ends_with(&format!("-{theme}-accent"))
+            })
+        })
 }
 
 fn human_size(bytes: u64) -> String {
@@ -117,6 +154,7 @@ fn output_path(
     input: &Path,
     normalize_name: bool,
     format: OutputFormat,
+    theme: Theme,
     accents: bool,
 ) -> Result<PathBuf, String> {
     let stem = input
@@ -124,7 +162,8 @@ fn output_path(
         .and_then(|s| s.to_str())
         .ok_or_else(|| format!("invalid input name: {}", input.display()))?;
     let stem = format!(
-        "{stem}{THEME_SUFFIX}{}",
+        "{stem}-{}{}",
+        theme.name(),
         if accents { "-accent" } else { "" }
     );
     let name = if normalize_name {
@@ -167,6 +206,7 @@ fn jobs(
     normalize_name: bool,
     format: OutputFormat,
     overwrite: bool,
+    theme: Theme,
     accents: bool,
 ) -> Result<Vec<Job>, String> {
     let mut paths = Vec::new();
@@ -178,7 +218,7 @@ fn jobs(
     paths.retain(|path| {
         if already_recolored(path) {
             eprintln!(
-                "skipped {}: filename already ends with -{THEME}",
+                "skipped {}: filename already has a paletteer suffix",
                 path.display()
             );
             false
@@ -195,7 +235,7 @@ fn jobs(
         if !supported(&input) {
             return Err(format!("unsupported file: {}", input.display()));
         }
-        let output = output_path(&input, normalize_name, format, accents)?;
+        let output = output_path(&input, normalize_name, format, theme, accents)?;
         if !outputs.insert(output.clone()) {
             return Err(format!(
                 "inputs resolve to the same output: {}",
@@ -220,6 +260,7 @@ fn run(cli: Cli) -> Result<(), String> {
         cli.normalize_name,
         cli.format,
         cli.overwrite,
+        cli.theme,
         cli.accents,
     )? {
         let input_size = fs::metadata(&job.input)
@@ -230,14 +271,20 @@ fn run(cli: Cli) -> Result<(), String> {
             job.output.file_name().unwrap().to_string_lossy(),
             process::id()
         ));
-        let conversion =
-            match recolor::encode_image(&job.input, &temp, cli.format, quality, cli.accents) {
-                Ok(conversion) => conversion,
-                Err(error) => {
-                    let _ = fs::remove_file(&temp);
-                    return Err(error);
-                }
-            };
+        let conversion = match recolor::encode_image(
+            &job.input,
+            &temp,
+            cli.format,
+            quality,
+            cli.theme,
+            cli.accents,
+        ) {
+            Ok(conversion) => conversion,
+            Err(error) => {
+                let _ = fs::remove_file(&temp);
+                return Err(error);
+            }
+        };
         fs::rename(&temp, &job.output).map_err(|e| format!("{}: {e}", job.output.display()))?;
         let output_size = fs::metadata(&job.output)
             .map_err(|e| format!("{}: {e}", job.output.display()))?
@@ -286,6 +333,15 @@ mod tests {
         assert_eq!(human_size(1024), "1.0 KiB");
         assert_eq!(human_size(1_572_864), "1.5 MiB");
     }
+
+    #[test]
+    fn supports_input_formats() {
+        for extension in ["png", "jpg", "jpeg", "webp", "WEBP"] {
+            assert!(supported(Path::new(&format!("image.{extension}"))));
+        }
+        assert!(!supported(Path::new("image.gif")));
+    }
+
     #[test]
     fn output_names() {
         assert_eq!(
@@ -293,17 +349,32 @@ mod tests {
                 Path::new("Misty Forest (Final).jpg"),
                 false,
                 OutputFormat::Png,
+                Theme::EverforestDarkMedium,
                 false,
             )
             .unwrap(),
             PathBuf::from("Misty Forest (Final)-everforest-dark-medium.png")
         );
         assert_eq!(
-            output_path(Path::new("foo.bar.png"), true, OutputFormat::Webp, false).unwrap(),
+            output_path(
+                Path::new("foo.bar.png"),
+                true,
+                OutputFormat::Webp,
+                Theme::EverforestDarkMedium,
+                false,
+            )
+            .unwrap(),
             PathBuf::from("foo-bar-everforest-dark-medium.webp")
         );
         assert_eq!(
-            output_path(Path::new("foo.jpg"), false, OutputFormat::Jpg, true).unwrap(),
+            output_path(
+                Path::new("foo.jpg"),
+                false,
+                OutputFormat::Jpg,
+                Theme::EverforestDarkMedium,
+                true,
+            )
+            .unwrap(),
             PathBuf::from("foo-everforest-dark-medium-accent.jpg")
         );
     }
@@ -315,7 +386,17 @@ mod tests {
         let png = directory.join("same.png");
         fs::File::create(&jpg).unwrap();
         fs::File::create(&png).unwrap();
-        assert!(jobs(&[jpg, png], false, OutputFormat::Png, false, false).is_err());
+        assert!(
+            jobs(
+                &[jpg, png],
+                false,
+                OutputFormat::Png,
+                false,
+                Theme::EverforestDarkMedium,
+                false,
+            )
+            .is_err()
+        );
         fs::remove_dir_all(directory).unwrap();
     }
 
@@ -327,8 +408,28 @@ mod tests {
         let input = directory.join("image.jpg");
         fs::File::create(&input).unwrap();
         fs::File::create(directory.join("image-everforest-dark-medium.png")).unwrap();
-        assert!(jobs(&[input.clone()], false, OutputFormat::Png, false, false).is_err());
-        assert!(jobs(&[input], false, OutputFormat::Png, true, false).is_ok());
+        assert!(
+            jobs(
+                &[input.clone()],
+                false,
+                OutputFormat::Png,
+                false,
+                Theme::EverforestDarkMedium,
+                false,
+            )
+            .is_err()
+        );
+        assert!(
+            jobs(
+                &[input],
+                false,
+                OutputFormat::Png,
+                true,
+                Theme::EverforestDarkMedium,
+                false,
+            )
+            .is_ok()
+        );
         fs::remove_dir_all(directory).unwrap();
     }
 
@@ -345,6 +446,7 @@ mod tests {
             false,
             OutputFormat::Webp,
             false,
+            Theme::EverforestDarkMedium,
             false,
         )
         .unwrap();

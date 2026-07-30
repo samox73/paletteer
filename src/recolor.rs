@@ -1,4 +1,4 @@
-use crate::OutputFormat;
+use crate::{OutputFormat, Theme};
 use image::{ExtendedColorType, ImageEncoder, ImageReader, RgbaImage, codecs::jpeg::JpegEncoder};
 use palette::{FromColor, Oklab, Srgb};
 use rayon::prelude::*;
@@ -15,38 +15,99 @@ pub struct Conversion {
     pub height: u32,
 }
 
-// https://github.com/sainnhe/everforest/blob/master/palette.md
-const EVERFOREST: &[(u8, u8, u8)] = &[
-    (0x23, 0x2A, 0x2E),
-    (0x2D, 0x35, 0x3B),
-    (0x34, 0x3F, 0x44),
-    (0x3D, 0x48, 0x4D),
-    (0x47, 0x52, 0x58),
-    (0x4F, 0x58, 0x5E),
-    (0x56, 0x63, 0x5F),
-    (0xD3, 0xC6, 0xAA),
-    (0xE6, 0x7E, 0x80),
-    (0xE6, 0x98, 0x75),
-    (0xDB, 0xBC, 0x7F),
-    (0xA7, 0xC0, 0x80),
-    (0x83, 0xC0, 0x92),
-    (0x7F, 0xBB, 0xB3),
-    (0xD6, 0x99, 0xB6),
-    (0x7A, 0x84, 0x78),
-    (0x85, 0x92, 0x89),
-    (0x9D, 0xA9, 0xA0),
-];
+struct ThemePalette {
+    neutral: &'static [u32],
+    accents: &'static [u32],
+}
 
-fn palette_labs(accents: bool) -> Vec<Oklab> {
-    EVERFOREST
+// https://github.com/sainnhe/everforest/blob/master/palette.md
+const EVERFOREST: ThemePalette = ThemePalette {
+    neutral: &[
+        0x232A2E, 0x2D353B, 0x343F44, 0x3D484D, 0x475258, 0x4F585E, 0x56635F, 0xD3C6AA, 0x7A8478,
+        0x859289, 0x9DA9A0,
+    ],
+    accents: &[
+        0xE67E80, 0xE69875, 0xDBBC7F, 0xA7C080, 0x83C092, 0x7FBBB3, 0xD699B6,
+    ],
+};
+// https://github.com/catppuccin/palette/blob/main/palette.json
+const CATPPUCCIN: ThemePalette = ThemePalette {
+    neutral: &[
+        0x1E1E2E, 0x181825, 0x11111B, 0x313244, 0x45475A, 0x585B70, 0x6C7086, 0x7F849C, 0x9399B2,
+        0xCDD6F4, 0xBAC2DE, 0xA6ADC8,
+    ],
+    accents: &[
+        0xF5E0DC, 0xF2CDCD, 0xF5C2E7, 0xCBA6F7, 0xF38BA8, 0xEBA0AC, 0xFAB387, 0xF9E2AF, 0xA6E3A1,
+        0x94E2D5, 0x89DCEB, 0x74C7EC, 0x89B4FA, 0xB4BEFE,
+    ],
+};
+// https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors/night.lua
+const TOKYO_NIGHT: ThemePalette = ThemePalette {
+    neutral: &[
+        0x16161E, 0x1A1B26, 0x292E42, 0x3B4261, 0x414868, 0x545C7E, 0x565F89, 0x737AA2, 0xA9B1D6,
+        0xC0CAF5,
+    ],
+    accents: &[
+        0xF7768E, 0x9ECE6A, 0xE0AF68, 0x7AA2F7, 0xBB9AF7, 0x7DCFFF, 0xFF9E64, 0xDB4B4B, 0x73DACA,
+    ],
+};
+// https://github.com/morhetz/gruvbox/blob/master/colors/gruvbox.vim
+const GRUVBOX: ThemePalette = ThemePalette {
+    neutral: &[
+        0x1D2021, 0x282828, 0x32302F, 0x3C3836, 0x504945, 0x665C54, 0x7C6F64, 0x928374, 0xA89984,
+        0xBDAE93, 0xD5C4A1, 0xEBDBB2, 0xFBF1C7,
+    ],
+    accents: &[
+        0xFB4934, 0xB8BB26, 0xFABD2F, 0x83A598, 0xD3869B, 0x8EC07C, 0xFE8019,
+    ],
+};
+// https://www.nordtheme.com/docs/colors-and-palettes
+const NORD: ThemePalette = ThemePalette {
+    neutral: &[
+        0x2E3440, 0x3B4252, 0x434C5E, 0x4C566A, 0xD8DEE9, 0xE5E9F0, 0xECEFF4,
+    ],
+    accents: &[
+        0x8FBCBB, 0x88C0D0, 0x81A1C1, 0x5E81AC, 0xBF616A, 0xD08770, 0xEBCB8B, 0xA3BE8C, 0xB48EAD,
+    ],
+};
+// https://draculatheme.com/contribute
+const DRACULA: ThemePalette = ThemePalette {
+    neutral: &[0x282A36, 0x44475A, 0x6272A4, 0xF8F8F2],
+    accents: &[
+        0x8BE9FD, 0x50FA7B, 0xFFB86C, 0xFF79C6, 0xBD93F9, 0xFF5555, 0xF1FA8C,
+    ],
+};
+// https://github.com/rose-pine/rose-pine-palette
+const ROSE_PINE: ThemePalette = ThemePalette {
+    neutral: &[
+        0x232136, 0x2A273F, 0x393552, 0x6E6A86, 0x908CAA, 0xE0DEF4, 0x2A283E, 0x44415A, 0x56526E,
+    ],
+    accents: &[0xEB6F92, 0xF6C177, 0xEA9A97, 0x3E8FB0, 0x9CCFD8, 0xC4A7E7],
+};
+
+fn palette(theme: Theme) -> &'static ThemePalette {
+    match theme {
+        Theme::EverforestDarkMedium => &EVERFOREST,
+        Theme::CatppuccinMocha => &CATPPUCCIN,
+        Theme::TokyoNight => &TOKYO_NIGHT,
+        Theme::GruvboxDarkMedium => &GRUVBOX,
+        Theme::Nord => &NORD,
+        Theme::Dracula => &DRACULA,
+        Theme::RosePineMoon => &ROSE_PINE,
+    }
+}
+
+fn palette_labs(theme: Theme, accents: bool) -> Vec<Oklab> {
+    let palette = palette(theme);
+    palette
+        .neutral
         .iter()
-        .enumerate()
-        .filter(|(index, _)| accents || !(8..15).contains(index))
-        .map(|(_, &(r, g, b))| {
+        .chain(if accents { palette.accents } else { &[] })
+        .map(|&color| {
             Oklab::from_color(Srgb::new(
-                r as f32 / 255.0,
-                g as f32 / 255.0,
-                b as f32 / 255.0,
+                ((color >> 16) & 0xFF) as f32 / 255.0,
+                ((color >> 8) & 0xFF) as f32 / 255.0,
+                (color & 0xFF) as f32 / 255.0,
             ))
         })
         .collect()
@@ -64,8 +125,8 @@ fn nearest(color: Oklab, colors: &[Oklab]) -> Oklab {
         .expect("palette is not empty")
 }
 
-pub fn recolor(image: &mut RgbaImage, accents: bool) {
-    let colors = palette_labs(accents);
+pub fn recolor(image: &mut RgbaImage, theme: Theme, accents: bool) {
+    let colors = palette_labs(theme, accents);
     image.as_mut().par_chunks_exact_mut(4).for_each(|pixel| {
         if pixel[3] == 0 {
             return;
@@ -89,6 +150,7 @@ pub fn encode_image(
     temporary: &Path,
     format: OutputFormat,
     quality: u8,
+    theme: Theme,
     accents: bool,
 ) -> Result<Conversion, String> {
     let started = Instant::now();
@@ -97,7 +159,7 @@ pub fn encode_image(
         .decode()
         .map_err(|e| format!("{}: {e}", input.display()))?
         .to_rgba8();
-    recolor(&mut image, accents);
+    recolor(&mut image, theme, accents);
     let (width, height) = image.dimensions();
     let file = fs::OpenOptions::new()
         .write(true)
@@ -150,8 +212,26 @@ mod tests {
 
     #[test]
     fn accents_are_opt_in() {
-        assert_eq!(palette_labs(false).len(), 11);
-        assert_eq!(palette_labs(true).len(), EVERFOREST.len());
+        assert_eq!(palette_labs(Theme::EverforestDarkMedium, false).len(), 11);
+        assert_eq!(
+            palette_labs(Theme::EverforestDarkMedium, true).len(),
+            EVERFOREST.neutral.len() + EVERFOREST.accents.len()
+        );
+    }
+
+    #[test]
+    fn every_theme_has_neutral_colors() {
+        for theme in [
+            Theme::EverforestDarkMedium,
+            Theme::CatppuccinMocha,
+            Theme::TokyoNight,
+            Theme::GruvboxDarkMedium,
+            Theme::Nord,
+            Theme::Dracula,
+            Theme::RosePineMoon,
+        ] {
+            assert!(!palette_labs(theme, false).is_empty());
+        }
     }
 
     #[test]
@@ -160,14 +240,14 @@ mod tests {
         for (x, _, pixel) in image.enumerate_pixels_mut() {
             *pixel = image::Rgba([x as u8, x as u8, x as u8, x as u8]);
         }
-        recolor(&mut image, false);
+        recolor(&mut image, Theme::EverforestDarkMedium, false);
         assert!(
             image
                 .pixels()
                 .map(|p| [p[0], p[1], p[2]])
                 .collect::<std::collections::HashSet<_>>()
                 .len()
-                > EVERFOREST.len()
+                > EVERFOREST.neutral.len() + EVERFOREST.accents.len()
         );
         for (x, _, pixel) in image.enumerate_pixels() {
             assert_eq!(pixel[3], x as u8);
@@ -185,7 +265,15 @@ mod tests {
             .unwrap();
         for (format, extension) in [(OutputFormat::Webp, "webp"), (OutputFormat::Jpg, "jpg")] {
             let output = directory.join(format!("output.{extension}"));
-            encode_image(&input, &output, format, 80, false).unwrap();
+            encode_image(
+                &input,
+                &output,
+                format,
+                80,
+                Theme::EverforestDarkMedium,
+                false,
+            )
+            .unwrap();
             assert_eq!(image::open(output).unwrap().dimensions(), (1, 1));
         }
         std::fs::remove_dir_all(directory).unwrap();

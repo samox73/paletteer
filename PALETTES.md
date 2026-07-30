@@ -1,10 +1,20 @@
 # Supported palettes
 
-Paletteer currently supports one palette: `everforest-dark-medium`.
+Paletteer supports these palettes:
+
+| Name | Official source |
+| --- | --- |
+| `everforest-dark-medium` | [Everforest](https://github.com/sainnhe/everforest/blob/master/palette.md) |
+| `catppuccin-mocha` | [Catppuccin Mocha](https://github.com/catppuccin/palette/blob/main/palette.json) |
+| `tokyo-night` | [Tokyo Night](https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors/night.lua) |
+| `gruvbox-dark-medium` | [Gruvbox Dark Medium](https://github.com/morhetz/gruvbox/blob/master/colors/gruvbox.vim) |
+| `nord` | [Nord](https://www.nordtheme.com/docs/colors-and-palettes) |
+| `dracula` | [Dracula](https://draculatheme.com/contribute) |
+| `rose-pine-moon` | [Rosé Pine Moon](https://github.com/rose-pine/rose-pine-palette) |
 
 The color names and values below come from the [official Everforest palette](https://github.com/sainnhe/everforest/blob/master/palette.md). Paletteer uses these colors to select hue and chroma; it preserves the source image's lightness.
 
-Backgrounds, foreground, and greys are used by default. Accents require `--accents` / `-a`.
+Neutral colors are used by default. Accents require `--accents` / `-a`.
 
 ## everforest-dark-medium
 
