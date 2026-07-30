@@ -10,6 +10,8 @@ use std::{
 };
 
 const THEME: &str = "everforest-dark-medium";
+const THEME_SUFFIX: &str = "-everforest-dark-medium";
+const ACCENT_SUFFIX: &str = "-everforest-dark-medium-accent";
 const DEFAULT_QUALITY: u8 = 80;
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -73,7 +75,7 @@ fn supported(path: &Path) -> bool {
 fn already_recolored(path: &Path) -> bool {
     path.file_stem()
         .and_then(|stem| stem.to_str())
-        .is_some_and(|stem| stem.ends_with(&format!("-{THEME}")))
+        .is_some_and(|stem| stem.ends_with(THEME_SUFFIX) || stem.ends_with(ACCENT_SUFFIX))
 }
 
 fn human_size(bytes: u64) -> String {
@@ -115,12 +117,16 @@ fn output_path(
     input: &Path,
     normalize_name: bool,
     format: OutputFormat,
+    accents: bool,
 ) -> Result<PathBuf, String> {
     let stem = input
         .file_stem()
         .and_then(|s| s.to_str())
         .ok_or_else(|| format!("invalid input name: {}", input.display()))?;
-    let stem = format!("{stem}-{THEME}");
+    let stem = format!(
+        "{stem}{THEME_SUFFIX}{}",
+        if accents { "-accent" } else { "" }
+    );
     let name = if normalize_name {
         normalized(&stem)?
     } else {
@@ -161,6 +167,7 @@ fn jobs(
     normalize_name: bool,
     format: OutputFormat,
     overwrite: bool,
+    accents: bool,
 ) -> Result<Vec<Job>, String> {
     let mut paths = Vec::new();
     for input in inputs {
@@ -188,7 +195,7 @@ fn jobs(
         if !supported(&input) {
             return Err(format!("unsupported file: {}", input.display()));
         }
-        let output = output_path(&input, normalize_name, format)?;
+        let output = output_path(&input, normalize_name, format, accents)?;
         if !outputs.insert(output.clone()) {
             return Err(format!(
                 "inputs resolve to the same output: {}",
@@ -208,7 +215,13 @@ fn run(cli: Cli) -> Result<(), String> {
         return Err("--quality is only valid with --format webp or jpg".to_owned());
     }
     let quality = cli.quality.unwrap_or(DEFAULT_QUALITY);
-    for job in jobs(&cli.input, cli.normalize_name, cli.format, cli.overwrite)? {
+    for job in jobs(
+        &cli.input,
+        cli.normalize_name,
+        cli.format,
+        cli.overwrite,
+        cli.accents,
+    )? {
         let input_size = fs::metadata(&job.input)
             .map_err(|e| format!("{}: {e}", job.input.display()))?
             .len();
@@ -279,14 +292,19 @@ mod tests {
             output_path(
                 Path::new("Misty Forest (Final).jpg"),
                 false,
-                OutputFormat::Png
+                OutputFormat::Png,
+                false,
             )
             .unwrap(),
             PathBuf::from("Misty Forest (Final)-everforest-dark-medium.png")
         );
         assert_eq!(
-            output_path(Path::new("foo.bar.png"), true, OutputFormat::Webp).unwrap(),
+            output_path(Path::new("foo.bar.png"), true, OutputFormat::Webp, false).unwrap(),
             PathBuf::from("foo-bar-everforest-dark-medium.webp")
+        );
+        assert_eq!(
+            output_path(Path::new("foo.jpg"), false, OutputFormat::Jpg, true).unwrap(),
+            PathBuf::from("foo-everforest-dark-medium-accent.jpg")
         );
     }
     #[test]
@@ -297,7 +315,7 @@ mod tests {
         let png = directory.join("same.png");
         fs::File::create(&jpg).unwrap();
         fs::File::create(&png).unwrap();
-        assert!(jobs(&[jpg, png], false, OutputFormat::Png, false).is_err());
+        assert!(jobs(&[jpg, png], false, OutputFormat::Png, false, false).is_err());
         fs::remove_dir_all(directory).unwrap();
     }
 
@@ -309,8 +327,8 @@ mod tests {
         let input = directory.join("image.jpg");
         fs::File::create(&input).unwrap();
         fs::File::create(directory.join("image-everforest-dark-medium.png")).unwrap();
-        assert!(jobs(&[input.clone()], false, OutputFormat::Png, false).is_err());
-        assert!(jobs(&[input], false, OutputFormat::Png, true).is_ok());
+        assert!(jobs(&[input.clone()], false, OutputFormat::Png, false, false).is_err());
+        assert!(jobs(&[input], false, OutputFormat::Png, true, false).is_ok());
         fs::remove_dir_all(directory).unwrap();
     }
 
@@ -322,7 +340,14 @@ mod tests {
         let prior_output = directory.join("mountain-everforest-dark-medium.jpg");
         fs::File::create(&original).unwrap();
         fs::File::create(&prior_output).unwrap();
-        let jobs = jobs(&[original, prior_output], false, OutputFormat::Webp, false).unwrap();
+        let jobs = jobs(
+            &[original, prior_output],
+            false,
+            OutputFormat::Webp,
+            false,
+            false,
+        )
+        .unwrap();
         assert_eq!(jobs.len(), 1);
         fs::remove_dir_all(directory).unwrap();
     }
