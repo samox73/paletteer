@@ -4,6 +4,8 @@ Paletteer currently supports one palette: `everforest-dark-medium`.
 
 The color names and values below come from the [official Everforest palette](https://github.com/sainnhe/everforest/blob/master/palette.md). Paletteer uses these colors to select hue and chroma; it preserves the source image's lightness.
 
+Backgrounds, foreground, and greys are used by default. Accents require `--accents` / `-a`.
+
 ## everforest-dark-medium
 
 <sub>backgrounds</sub>

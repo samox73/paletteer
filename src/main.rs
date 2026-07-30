@@ -47,6 +47,10 @@ struct Cli {
     format: OutputFormat,
     #[arg(short = 'q', long, value_parser = clap::value_parser!(u8).range(1..=100))]
     quality: Option<u8>,
+    #[arg(short = 'a', long, help = "Include palette accent colors")]
+    accents: bool,
+    #[arg(short = 'o', long, help = "Replace existing output files")]
+    overwrite: bool,
     #[arg(required = true)]
     input: Vec<PathBuf>,
 }
@@ -64,6 +68,12 @@ fn supported(path: &Path) -> bool {
             .as_deref(),
         Some("png" | "jpg" | "jpeg")
     )
+}
+
+fn already_recolored(path: &Path) -> bool {
+    path.file_stem()
+        .and_then(|stem| stem.to_str())
+        .is_some_and(|stem| stem.ends_with(&format!("-{THEME}")))
 }
 
 fn normalized(stem: &str) -> Result<String, String> {
@@ -135,6 +145,7 @@ fn jobs(
     inputs: &[PathBuf],
     normalize_name: bool,
     format: OutputFormat,
+    overwrite: bool,
 ) -> Result<Vec<Job>, String> {
     let mut paths = Vec::new();
     for input in inputs {
@@ -142,6 +153,7 @@ fn jobs(
     }
     paths.sort();
     paths.dedup();
+    paths.retain(|path| !already_recolored(path));
     let mut outputs = HashSet::new();
     let mut jobs = Vec::new();
     for input in paths {
@@ -158,7 +170,7 @@ fn jobs(
                 output.display()
             ));
         }
-        if output.exists() {
+        if output.exists() && !overwrite {
             return Err(format!("output already exists: {}", output.display()));
         }
         jobs.push(Job { input, output });
@@ -171,13 +183,15 @@ fn run(cli: Cli) -> Result<(), String> {
         return Err("--quality is only valid with --format webp or jpg".to_owned());
     }
     let quality = cli.quality.unwrap_or(DEFAULT_QUALITY);
-    for job in jobs(&cli.input, cli.normalize_name, cli.format)? {
+    for job in jobs(&cli.input, cli.normalize_name, cli.format, cli.overwrite)? {
         let temp = job.output.with_file_name(format!(
             ".{}.{}.tmp",
             job.output.file_name().unwrap().to_string_lossy(),
             process::id()
         ));
-        if let Err(error) = recolor::encode_image(&job.input, &temp, cli.format, quality) {
+        if let Err(error) =
+            recolor::encode_image(&job.input, &temp, cli.format, quality, cli.accents)
+        {
             let _ = fs::remove_file(&temp);
             return Err(error);
         }
@@ -233,7 +247,33 @@ mod tests {
         let png = directory.join("same.png");
         fs::File::create(&jpg).unwrap();
         fs::File::create(&png).unwrap();
-        assert!(jobs(&[jpg, png], false, OutputFormat::Png).is_err());
+        assert!(jobs(&[jpg, png], false, OutputFormat::Png, false).is_err());
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn overwrite_allows_an_existing_output() {
+        let directory =
+            std::env::temp_dir().join(format!("paletteer-overwrite-test-{}", process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let input = directory.join("image.jpg");
+        fs::File::create(&input).unwrap();
+        fs::File::create(directory.join("image-everforest-dark-medium.png")).unwrap();
+        assert!(jobs(&[input.clone()], false, OutputFormat::Png, false).is_err());
+        assert!(jobs(&[input], false, OutputFormat::Png, true).is_ok());
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn prior_outputs_are_skipped() {
+        let directory = std::env::temp_dir().join(format!("paletteer-skip-test-{}", process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let original = directory.join("mountain.jpg");
+        let prior_output = directory.join("mountain-everforest-dark-medium.jpg");
+        fs::File::create(&original).unwrap();
+        fs::File::create(&prior_output).unwrap();
+        let jobs = jobs(&[original, prior_output], false, OutputFormat::Webp, false).unwrap();
+        assert_eq!(jobs.len(), 1);
         fs::remove_dir_all(directory).unwrap();
     }
 }

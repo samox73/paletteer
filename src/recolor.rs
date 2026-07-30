@@ -30,10 +30,12 @@ const EVERFOREST: &[(u8, u8, u8)] = &[
     (0x9D, 0xA9, 0xA0),
 ];
 
-fn palette_labs() -> Vec<Oklab> {
+fn palette_labs(accents: bool) -> Vec<Oklab> {
     EVERFOREST
         .iter()
-        .map(|&(r, g, b)| {
+        .enumerate()
+        .filter(|(index, _)| accents || !(8..15).contains(index))
+        .map(|(_, &(r, g, b))| {
             Oklab::from_color(Srgb::new(
                 r as f32 / 255.0,
                 g as f32 / 255.0,
@@ -55,8 +57,8 @@ fn nearest(color: Oklab, colors: &[Oklab]) -> Oklab {
         .expect("palette is not empty")
 }
 
-pub fn recolor(image: &mut RgbaImage) {
-    let colors = palette_labs();
+pub fn recolor(image: &mut RgbaImage, accents: bool) {
+    let colors = palette_labs(accents);
     for pixel in image.pixels_mut() {
         if pixel[3] == 0 {
             continue;
@@ -80,6 +82,7 @@ pub fn encode_image(
     temporary: &Path,
     format: OutputFormat,
     quality: u8,
+    accents: bool,
 ) -> Result<(), String> {
     let started = Instant::now();
     let mut image = ImageReader::open(input)
@@ -87,7 +90,7 @@ pub fn encode_image(
         .decode()
         .map_err(|e| format!("{}: {e}", input.display()))?
         .to_rgba8();
-    recolor(&mut image);
+    recolor(&mut image, accents);
     let file = fs::OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -135,12 +138,18 @@ mod tests {
     }
 
     #[test]
+    fn accents_are_opt_in() {
+        assert_eq!(palette_labs(false).len(), 11);
+        assert_eq!(palette_labs(true).len(), EVERFOREST.len());
+    }
+
+    #[test]
     fn recolor_keeps_alpha_and_gradient_lightness() {
         let mut image = RgbaImage::new(256, 1);
         for (x, _, pixel) in image.enumerate_pixels_mut() {
             *pixel = image::Rgba([x as u8, x as u8, x as u8, x as u8]);
         }
-        recolor(&mut image);
+        recolor(&mut image, false);
         assert!(
             image
                 .pixels()
@@ -165,7 +174,7 @@ mod tests {
             .unwrap();
         for (format, extension) in [(OutputFormat::Webp, "webp"), (OutputFormat::Jpg, "jpg")] {
             let output = directory.join(format!("output.{extension}"));
-            encode_image(&input, &output, format, 80).unwrap();
+            encode_image(&input, &output, format, 80, false).unwrap();
             assert_eq!(image::open(output).unwrap().dimensions(), (1, 1));
         }
         std::fs::remove_dir_all(directory).unwrap();
