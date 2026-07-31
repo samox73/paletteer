@@ -10,6 +10,7 @@ use std::{
 };
 
 const DEFAULT_QUALITY: u8 = 80;
+const DEFAULT_LAMBDA: f32 = 0.25;
 const THEME_NAMES: &[&str] = &[
     "everforest-dark-medium",
     "catppuccin-mocha",
@@ -92,6 +93,15 @@ struct Cli {
     quality: Option<u8>,
     #[arg(long, help = "Exclude the palette's accent colors")]
     neutral_only: bool,
+    #[arg(long, help = "Keep only the palette name in the output suffix")]
+    palette_name_only: bool,
+    #[arg(
+        long,
+        default_value_t = DEFAULT_LAMBDA,
+        value_parser = parse_lambda,
+        help = "Weight palette lightness during color matching (0 to 1)"
+    )]
+    lambda: f32,
     #[arg(
         long,
         default_value_t = 1.0,
@@ -125,6 +135,19 @@ fn parse_mix(value: &str) -> Result<f32, String> {
     } else {
         Err(format!(
             "invalid mix value '{value}': expected a number from 0 to 1"
+        ))
+    }
+}
+
+fn parse_lambda(value: &str) -> Result<f32, String> {
+    let lambda = value
+        .parse::<f32>()
+        .map_err(|_| format!("invalid lambda '{value}': expected a number from 0 to 1"))?;
+    if lambda.is_finite() && (0.0..=1.0).contains(&lambda) {
+        Ok(if lambda == 0.0 { 0.0 } else { lambda })
+    } else {
+        Err(format!(
+            "invalid lambda '{value}': expected a number from 0 to 1"
         ))
     }
 }
@@ -227,6 +250,9 @@ fn already_recolored(path: &Path, palette_name: &str) -> bool {
         .and_then(|stem| stem.to_str())
         .is_some_and(|stem| {
             let stem = stem.rsplit_once("-mix-").map_or(stem, |(base, _mix)| base);
+            let stem = stem
+                .rsplit_once("-lambda-")
+                .map_or(stem, |(base, _lambda)| base);
             THEME_NAMES
                 .iter()
                 .copied()
@@ -274,25 +300,37 @@ fn normalized(stem: &str) -> Result<String, String> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn output_path(
     input: &Path,
     normalize_name: bool,
     format: OutputFormat,
     palette_name: &str,
     neutral_only: bool,
+    lambda: f32,
     mix: f32,
+    palette_name_only: bool,
 ) -> Result<PathBuf, String> {
     let stem = input
         .file_stem()
         .and_then(|s| s.to_str())
         .ok_or_else(|| format!("invalid input name: {}", input.display()))?;
-    let neutral_suffix = if neutral_only { "-neutral" } else { "" };
-    let mix_suffix = if mix == 1.0 {
+    let neutral_suffix = if neutral_only && !palette_name_only {
+        "-neutral"
+    } else {
+        ""
+    };
+    let lambda_suffix = if lambda == DEFAULT_LAMBDA || palette_name_only {
+        String::new()
+    } else {
+        format!("-lambda-{lambda}")
+    };
+    let mix_suffix = if mix == 1.0 || palette_name_only {
         String::new()
     } else {
         format!("-mix-{mix}")
     };
-    let stem = format!("{stem}-{palette_name}{neutral_suffix}{mix_suffix}");
+    let stem = format!("{stem}-{palette_name}{neutral_suffix}{lambda_suffix}{mix_suffix}");
     let name = if normalize_name {
         normalized(&stem)?
     } else {
@@ -328,6 +366,7 @@ fn expand(input: &Path) -> Result<Vec<PathBuf>, String> {
     Ok(vec![input.to_path_buf()])
 }
 
+#[allow(clippy::too_many_arguments)]
 fn jobs(
     inputs: &[PathBuf],
     normalize_name: bool,
@@ -335,7 +374,9 @@ fn jobs(
     overwrite: bool,
     palette_name: &str,
     neutral_only: bool,
+    lambda: f32,
     mix: f32,
+    palette_name_only: bool,
 ) -> Result<Vec<Job>, String> {
     let mut paths = Vec::new();
     for input in inputs {
@@ -369,7 +410,9 @@ fn jobs(
             format,
             palette_name,
             neutral_only,
+            lambda,
             mix,
+            palette_name_only,
         )?;
         if !outputs.insert(output.clone()) {
             return Err(format!(
@@ -398,7 +441,9 @@ fn run(cli: Cli) -> Result<(), String> {
         cli.overwrite,
         &palette.name,
         cli.neutral_only,
+        cli.lambda,
         cli.mix,
+        cli.palette_name_only,
     )? {
         let input_size = fs::metadata(&job.input)
             .map_err(|e| format!("{}: {e}", job.input.display()))?
@@ -414,6 +459,7 @@ fn run(cli: Cli) -> Result<(), String> {
             cli.format,
             quality,
             &palette.colors,
+            cli.lambda,
             cli.mix,
         ) {
             Ok(conversion) => conversion,
@@ -488,7 +534,9 @@ mod tests {
                 OutputFormat::Png,
                 "everforest-dark-medium",
                 false,
+                DEFAULT_LAMBDA,
                 1.0,
+                false,
             )
             .unwrap(),
             PathBuf::from("Misty Forest (Final)-everforest-dark-medium.png")
@@ -500,7 +548,9 @@ mod tests {
                 OutputFormat::Webp,
                 "everforest-dark-medium",
                 false,
+                DEFAULT_LAMBDA,
                 1.0,
+                false,
             )
             .unwrap(),
             PathBuf::from("foo-bar-everforest-dark-medium.webp")
@@ -512,7 +562,9 @@ mod tests {
                 OutputFormat::Jpg,
                 "everforest-dark-medium",
                 true,
+                DEFAULT_LAMBDA,
                 1.0,
+                false,
             )
             .unwrap(),
             PathBuf::from("foo-everforest-dark-medium-neutral.jpg")
@@ -524,7 +576,9 @@ mod tests {
                 OutputFormat::Jpg,
                 "everforest-dark-medium",
                 false,
+                DEFAULT_LAMBDA,
                 0.5,
+                false,
             )
             .unwrap(),
             PathBuf::from("foo-everforest-dark-medium-mix-0.5.jpg")
@@ -536,10 +590,40 @@ mod tests {
                 OutputFormat::Jpg,
                 "everforest-dark-medium",
                 true,
+                DEFAULT_LAMBDA,
                 0.5,
+                false,
             )
             .unwrap(),
             PathBuf::from("foo-everforest-dark-medium-neutral-mix-0-5.jpg")
+        );
+        assert_eq!(
+            output_path(
+                Path::new("foo.jpg"),
+                false,
+                OutputFormat::Jpg,
+                "everforest-dark-medium",
+                false,
+                1.0,
+                1.0,
+                false,
+            )
+            .unwrap(),
+            PathBuf::from("foo-everforest-dark-medium-lambda-1.jpg")
+        );
+        assert_eq!(
+            output_path(
+                Path::new("foo.jpg"),
+                false,
+                OutputFormat::Jpg,
+                "everforest-dark-medium",
+                true,
+                1.0,
+                0.5,
+                true,
+            )
+            .unwrap(),
+            PathBuf::from("foo-everforest-dark-medium.jpg")
         );
     }
 
@@ -550,6 +634,16 @@ mod tests {
         assert_eq!(parse_mix("1").unwrap(), 1.0);
         for invalid in ["-0.1", "1.1", "NaN", "inf", "nope"] {
             assert!(parse_mix(invalid).is_err());
+        }
+    }
+
+    #[test]
+    fn lambda_validation() {
+        assert_eq!(parse_lambda("0").unwrap(), 0.0);
+        assert_eq!(parse_lambda("0.25").unwrap(), DEFAULT_LAMBDA);
+        assert_eq!(parse_lambda("1").unwrap(), 1.0);
+        for invalid in ["-0.1", "1.1", "NaN", "inf", "nope"] {
+            assert!(parse_lambda(invalid).is_err());
         }
     }
 
@@ -615,7 +709,9 @@ accents = ["#ff8800"]
                 false,
                 "everforest-dark-medium",
                 false,
+                DEFAULT_LAMBDA,
                 1.0,
+                false,
             )
             .is_err()
         );
@@ -638,7 +734,9 @@ accents = ["#ff8800"]
                 false,
                 "everforest-dark-medium",
                 false,
+                DEFAULT_LAMBDA,
                 1.0,
+                false,
             )
             .is_err()
         );
@@ -650,7 +748,9 @@ accents = ["#ff8800"]
                 true,
                 "everforest-dark-medium",
                 false,
+                DEFAULT_LAMBDA,
                 1.0,
+                false,
             )
             .is_ok()
         );
@@ -672,7 +772,9 @@ accents = ["#ff8800"]
             false,
             "everforest-dark-medium",
             false,
+            DEFAULT_LAMBDA,
             1.0,
+            false,
         )
         .unwrap();
         assert_eq!(jobs.len(), 1);

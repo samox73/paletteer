@@ -33,17 +33,17 @@ Built-in themes: `everforest-dark-medium`, `catppuccin-mocha`, `tokyo-night`, `g
 <tr><td><img src="examples-400/DSC_2357.JPG" width="400" alt="Original DSC 2357"></td><td><img src="examples-400/dsc-2357-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2357"></td><td><img src="examples-400/dsc-2357-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 2357"></td></tr>
 </table>
 
-### Built-in palette comparison
+### Built-in palette comparison (`--lambda 0.25`)
 
 <table>
 <tr><th>Original</th><th>Everforest Dark Medium</th></tr>
-<tr><td><img src="examples-400/DSC_1657.JPG" width="400" alt="Original DSC 1657"></td><td><img src="examples-400/dsc-1657-everforest-dark-medium.jpg" width="400" alt="DSC 1657 recolored with Everforest Dark Medium at mix 0.9"></td></tr>
+<tr><td><img src="examples-400/DSC_1657.JPG" width="400" alt="Original DSC 1657"></td><td><img src="examples-400/dsc-1657-everforest-dark-medium.jpg" width="400" alt="DSC 1657 recolored with Everforest Dark Medium"></td></tr>
 <tr><th>Catppuccin Mocha</th><th>Tokyo Night</th></tr>
-<tr><td><img src="examples-400/dsc-1657-catppuccin-mocha.jpg" width="400" alt="DSC 1657 recolored with Catppuccin Mocha at mix 0.9"></td><td><img src="examples-400/dsc-1657-tokyo-night.jpg" width="400" alt="DSC 1657 recolored with Tokyo Night at mix 0.9"></td></tr>
+<tr><td><img src="examples-400/dsc-1657-catppuccin-mocha.jpg" width="400" alt="DSC 1657 recolored with Catppuccin Mocha"></td><td><img src="examples-400/dsc-1657-tokyo-night.jpg" width="400" alt="DSC 1657 recolored with Tokyo Night"></td></tr>
 <tr><th>Gruvbox Dark Medium</th><th>Nord</th></tr>
-<tr><td><img src="examples-400/dsc-1657-gruvbox-dark-medium.jpg" width="400" alt="DSC 1657 recolored with Gruvbox Dark Medium at mix 0.9"></td><td><img src="examples-400/dsc-1657-nord.jpg" width="400" alt="DSC 1657 recolored with Nord at mix 0.9"></td></tr>
+<tr><td><img src="examples-400/dsc-1657-gruvbox-dark-medium.jpg" width="400" alt="DSC 1657 recolored with Gruvbox Dark Medium"></td><td><img src="examples-400/dsc-1657-nord.jpg" width="400" alt="DSC 1657 recolored with Nord"></td></tr>
 <tr><th>Dracula</th><th>Rosé Pine Moon</th></tr>
-<tr><td><img src="examples-400/dsc-1657-dracula.jpg" width="400" alt="DSC 1657 recolored with Dracula at mix 0.9"></td><td><img src="examples-400/dsc-1657-rose-pine-moon.jpg" width="400" alt="DSC 1657 recolored with Rosé Pine Moon at mix 0.9"></td></tr>
+<tr><td><img src="examples-400/dsc-1657-dracula.jpg" width="400" alt="DSC 1657 recolored with Dracula"></td><td><img src="examples-400/dsc-1657-rose-pine-moon.jpg" width="400" alt="DSC 1657 recolored with Rosé Pine Moon"></td></tr>
 </table>
 
 ## Installation
@@ -67,6 +67,7 @@ paletteer [OPTIONS] <--theme <THEME>|--theme-file <FILE>> <INPUT>...
 | `-f`, `--format <FORMAT>` | Optional; `png` | Selects `png`, `webp`, or `jpg` output. PNG is lossless; JPEG discards alpha. | Choose lossless output, smaller WebP files, or broadly compatible JPEG files. |
 | `-q`, `--quality <1-100>` | Optional; `80` for WebP/JPEG | Sets lossy encoding quality. Using it with PNG is an error. | Trade output size for visual quality when writing WebP or JPEG. |
 | `--neutral-only` | Optional; off | Excludes accent colors and adds `-neutral` to the output filename. | Produce a deliberately subdued, near-monochrome result. |
+| `--lambda <0-1>` | Optional; `0.25` | Weights palette lightness when selecting the nearest color; output still preserves source lightness. Non-default values add `-lambda-<value>` to the filename. | Use `0` for hue/chroma-only matching or increase toward `1` to make palette lightness influence color assignment. |
 | `--mix <0-1>` | Optional; `1` | Blends the original and remapped Oklab color while preserving source lightness. Non-default values add `-mix-<value>` to the output filename. | Use `0` for the original colors, an intermediate value such as `0.5` for a subtler palette tint, or `1` for the full remap. |
 | `-o`, `--overwrite` | Optional; off | Replaces an existing output only after the new image encodes successfully. | Regenerate images without deleting old outputs manually. |
 | `-h`, `--help` | Optional | Prints the built-in CLI reference. | Check available arguments from the installed binary. |
@@ -92,8 +93,8 @@ paletteer --theme-file examples/forest-dusk.toml --mix 0.9 wallpaper.jpg
 
 Quote recursive globs for consistent behavior across shells. Files whose names
 already carry a built-in or currently selected custom palette suffix
-(optionally followed by `-neutral` and `-mix-<value>`) are skipped to prevent
-repeat recoloring.
+(optionally followed by `-neutral`, `-lambda-<value>`, and `-mix-<value>`) are
+skipped to prevent repeat recoloring.
 
 ## Acknoledgements
 

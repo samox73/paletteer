@@ -120,17 +120,19 @@ fn palette_labs(colors: &[u32]) -> Vec<Oklab> {
         .collect()
 }
 
-fn nearest(color: Oklab, colors: &[Oklab]) -> Oklab {
+fn nearest(color: Oklab, colors: &[Oklab], lambda: f32) -> Oklab {
     *colors
         .iter()
         .min_by(|a, b| {
-            let distance = |x: &Oklab| (color.a - x.a).powi(2) + (color.b - x.b).powi(2);
+            let distance = |x: &Oklab| {
+                lambda * (color.l - x.l).powi(2) + (color.a - x.a).powi(2) + (color.b - x.b).powi(2)
+            };
             distance(a).total_cmp(&distance(b))
         })
         .expect("palette is not empty")
 }
 
-pub fn recolor(image: &mut RgbaImage, colors: &[u32], mix: f32) {
+pub fn recolor(image: &mut RgbaImage, colors: &[u32], lambda: f32, mix: f32) {
     if mix == 0.0 {
         return;
     }
@@ -144,7 +146,7 @@ pub fn recolor(image: &mut RgbaImage, colors: &[u32], mix: f32) {
             pixel[1] as f32 / 255.0,
             pixel[2] as f32 / 255.0,
         ));
-        let selected = nearest(original, &colors);
+        let selected = nearest(original, &colors, lambda);
         let remapped = Oklab::new(
             original.l,
             original.a + mix * (selected.a - original.a),
@@ -164,6 +166,7 @@ pub fn encode_image(
     format: OutputFormat,
     quality: u8,
     colors: &[u32],
+    lambda: f32,
     mix: f32,
 ) -> Result<Conversion, String> {
     let started = Instant::now();
@@ -172,7 +175,7 @@ pub fn encode_image(
         .decode()
         .map_err(|e| format!("{}: {e}", input.display()))?
         .to_rgba8();
-    recolor(&mut image, colors, mix);
+    recolor(&mut image, colors, lambda, mix);
     let (width, height) = image.dimensions();
     let file = fs::OpenOptions::new()
         .write(true)
@@ -218,9 +221,11 @@ mod tests {
     use image::GenericImageView;
 
     #[test]
-    fn nearest_ignores_lightness() {
+    fn lambda_controls_lightness_weight() {
         let colors = [Oklab::new(0.1, 0.18, -0.08), Oklab::new(0.75, 0.0, 0.0)];
-        assert_eq!(nearest(Oklab::new(0.75, 0.18, -0.08), &colors), colors[0]);
+        let source = Oklab::new(0.75, 0.18, -0.08);
+        assert_eq!(nearest(source, &colors, 0.0), colors[0]);
+        assert_eq!(nearest(source, &colors, 1.0), colors[1]);
     }
 
     #[test]
@@ -259,6 +264,7 @@ mod tests {
         recolor(
             &mut image,
             &built_in_colors(Theme::EverforestDarkMedium, false),
+            0.25,
             1.0,
         );
         assert!(
@@ -280,14 +286,14 @@ mod tests {
         let colors = built_in_colors(Theme::EverforestDarkMedium, false);
 
         let mut unchanged = original.clone();
-        recolor(&mut unchanged, &colors, 0.0);
+        recolor(&mut unchanged, &colors, 0.25, 0.0);
         assert_eq!(unchanged, original);
 
         let mut midpoint = original.clone();
-        recolor(&mut midpoint, &colors, 0.5);
+        recolor(&mut midpoint, &colors, 0.25, 0.5);
 
         let mut remapped = original.clone();
-        recolor(&mut remapped, &colors, 1.0);
+        recolor(&mut remapped, &colors, 0.25, 1.0);
 
         assert_ne!(midpoint, original);
         assert_ne!(midpoint, remapped);
@@ -307,7 +313,7 @@ mod tests {
         let colors = built_in_colors(Theme::EverforestDarkMedium, false);
         for (format, extension) in [(OutputFormat::Webp, "webp"), (OutputFormat::Jpg, "jpg")] {
             let output = directory.join(format!("output.{extension}"));
-            encode_image(&input, &output, format, 80, &colors, 1.0).unwrap();
+            encode_image(&input, &output, format, 80, &colors, 0.25, 1.0).unwrap();
             assert_eq!(image::open(output).unwrap().dimensions(), (1, 1));
         }
         std::fs::remove_dir_all(directory).unwrap();
