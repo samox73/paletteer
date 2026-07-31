@@ -10,30 +10,34 @@ Built-in themes: `everforest-dark-medium`, `catppuccin-mocha`, `tokyo-night`, `g
 
 ## Examples
 
+Derived previews use `--palette-name-only`; their current settings are defined
+in `scripts/regenerate-readme-images.sh` and can be applied with
+`make readme-images` without changing these paths.
+
 <table>
-<tr><th>Original</th><th>Everforest Dark Medium</th><th>Everforest Dark Medium (neutral only)</th></tr>
-<tr><td><img src="examples-400/DSC_1255.JPG" width="400" alt="Original DSC 1255"></td><td><img src="examples-400/dsc-1255-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1255"></td><td><img src="examples-400/dsc-1255-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1255"></td></tr>
-<tr><td><img src="examples-400/DSC_1261.JPG" width="400" alt="Original DSC 1261"></td><td><img src="examples-400/dsc-1261-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1261"></td><td><img src="examples-400/dsc-1261-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1261"></td></tr>
-<tr><td><img src="examples-400/DSC_1275.JPG" width="400" alt="Original DSC 1275"></td><td><img src="examples-400/dsc-1275-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1275"></td><td><img src="examples-400/dsc-1275-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1275"></td></tr>
-<tr><td><img src="examples-400/DSC_1321.JPG" width="400" alt="Original DSC 1321"></td><td><img src="examples-400/dsc-1321-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1321"></td><td><img src="examples-400/dsc-1321-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1321"></td></tr>
-<tr><td><img src="examples-400/DSC_1340.JPG" width="400" alt="Original DSC 1340"></td><td><img src="examples-400/dsc-1340-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1340"></td><td><img src="examples-400/dsc-1340-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1340"></td></tr>
-<tr><td><img src="examples-400/DSC_1344.JPG" width="400" alt="Original DSC 1344"></td><td><img src="examples-400/dsc-1344-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1344"></td><td><img src="examples-400/dsc-1344-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1344"></td></tr>
-<tr><td><img src="examples-400/DSC_1383.JPG" width="400" alt="Original DSC 1383"></td><td><img src="examples-400/dsc-1383-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1383"></td><td><img src="examples-400/dsc-1383-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1383"></td></tr>
-<tr><td><img src="examples-400/DSC_1484.JPG" width="400" alt="Original DSC 1484"></td><td><img src="examples-400/dsc-1484-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1484"></td><td><img src="examples-400/dsc-1484-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1484"></td></tr>
-<tr><td><img src="examples-400/DSC_1571.JPG" width="400" alt="Original DSC 1571"></td><td><img src="examples-400/dsc-1571-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1571"></td><td><img src="examples-400/dsc-1571-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1571"></td></tr>
-<tr><td><img src="examples-400/DSC_1629.JPG" width="400" alt="Original DSC 1629"></td><td><img src="examples-400/dsc-1629-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1629"></td><td><img src="examples-400/dsc-1629-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1629"></td></tr>
-<tr><td><img src="examples-400/DSC_1657.JPG" width="400" alt="Original DSC 1657"></td><td><img src="examples-400/dsc-1657-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1657"></td><td><img src="examples-400/dsc-1657-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1657"></td></tr>
-<tr><td><img src="examples-400/DSC_1719.JPG" width="400" alt="Original DSC 1719"></td><td><img src="examples-400/dsc-1719-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1719"></td><td><img src="examples-400/dsc-1719-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1719"></td></tr>
-<tr><td><img src="examples-400/DSC_1806.JPG" width="400" alt="Original DSC 1806"></td><td><img src="examples-400/dsc-1806-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1806"></td><td><img src="examples-400/dsc-1806-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1806"></td></tr>
-<tr><td><img src="examples-400/DSC_1812.JPG" width="400" alt="Original DSC 1812"></td><td><img src="examples-400/dsc-1812-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1812"></td><td><img src="examples-400/dsc-1812-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1812"></td></tr>
-<tr><td><img src="examples-400/DSC_1915.JPG" width="400" alt="Original DSC 1915"></td><td><img src="examples-400/dsc-1915-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1915"></td><td><img src="examples-400/dsc-1915-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 1915"></td></tr>
-<tr><td><img src="examples-400/DSC_2080.JPG" width="400" alt="Original DSC 2080"></td><td><img src="examples-400/dsc-2080-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2080"></td><td><img src="examples-400/dsc-2080-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 2080"></td></tr>
-<tr><td><img src="examples-400/DSC_2311.JPG" width="400" alt="Original DSC 2311"></td><td><img src="examples-400/dsc-2311-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2311"></td><td><img src="examples-400/dsc-2311-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 2311"></td></tr>
-<tr><td><img src="examples-400/DSC_2316.JPG" width="400" alt="Original DSC 2316"></td><td><img src="examples-400/dsc-2316-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2316"></td><td><img src="examples-400/dsc-2316-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 2316"></td></tr>
-<tr><td><img src="examples-400/DSC_2357.JPG" width="400" alt="Original DSC 2357"></td><td><img src="examples-400/dsc-2357-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2357"></td><td><img src="examples-400/dsc-2357-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 2357"></td></tr>
+<tr><th>Original</th><th>Everforest Dark Medium</th></tr>
+<tr><td><img src="examples-400/DSC_1255.JPG" width="400" alt="Original DSC 1255"></td><td><img src="examples-400/dsc-1255-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1255"></td></tr>
+<tr><td><img src="examples-400/DSC_1261.JPG" width="400" alt="Original DSC 1261"></td><td><img src="examples-400/dsc-1261-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1261"></td></tr>
+<tr><td><img src="examples-400/DSC_1275.JPG" width="400" alt="Original DSC 1275"></td><td><img src="examples-400/dsc-1275-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1275"></td></tr>
+<tr><td><img src="examples-400/DSC_1321.JPG" width="400" alt="Original DSC 1321"></td><td><img src="examples-400/dsc-1321-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1321"></td></tr>
+<tr><td><img src="examples-400/DSC_1340.JPG" width="400" alt="Original DSC 1340"></td><td><img src="examples-400/dsc-1340-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1340"></td></tr>
+<tr><td><img src="examples-400/DSC_1344.JPG" width="400" alt="Original DSC 1344"></td><td><img src="examples-400/dsc-1344-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1344"></td></tr>
+<tr><td><img src="examples-400/DSC_1383.JPG" width="400" alt="Original DSC 1383"></td><td><img src="examples-400/dsc-1383-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1383"></td></tr>
+<tr><td><img src="examples-400/DSC_1484.JPG" width="400" alt="Original DSC 1484"></td><td><img src="examples-400/dsc-1484-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1484"></td></tr>
+<tr><td><img src="examples-400/DSC_1571.JPG" width="400" alt="Original DSC 1571"></td><td><img src="examples-400/dsc-1571-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1571"></td></tr>
+<tr><td><img src="examples-400/DSC_1629.JPG" width="400" alt="Original DSC 1629"></td><td><img src="examples-400/dsc-1629-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1629"></td></tr>
+<tr><td><img src="examples-400/DSC_1657.JPG" width="400" alt="Original DSC 1657"></td><td><img src="examples-400/dsc-1657-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1657"></td></tr>
+<tr><td><img src="examples-400/DSC_1719.JPG" width="400" alt="Original DSC 1719"></td><td><img src="examples-400/dsc-1719-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1719"></td></tr>
+<tr><td><img src="examples-400/DSC_1806.JPG" width="400" alt="Original DSC 1806"></td><td><img src="examples-400/dsc-1806-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1806"></td></tr>
+<tr><td><img src="examples-400/DSC_1812.JPG" width="400" alt="Original DSC 1812"></td><td><img src="examples-400/dsc-1812-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1812"></td></tr>
+<tr><td><img src="examples-400/DSC_1915.JPG" width="400" alt="Original DSC 1915"></td><td><img src="examples-400/dsc-1915-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 1915"></td></tr>
+<tr><td><img src="examples-400/DSC_2080.JPG" width="400" alt="Original DSC 2080"></td><td><img src="examples-400/dsc-2080-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2080"></td></tr>
+<tr><td><img src="examples-400/DSC_2311.JPG" width="400" alt="Original DSC 2311"></td><td><img src="examples-400/dsc-2311-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2311"></td></tr>
+<tr><td><img src="examples-400/DSC_2316.JPG" width="400" alt="Original DSC 2316"></td><td><img src="examples-400/dsc-2316-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2316"></td></tr>
+<tr><td><img src="examples-400/DSC_2357.JPG" width="400" alt="Original DSC 2357"></td><td><img src="examples-400/dsc-2357-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2357"></td></tr>
 </table>
 
-### Built-in palette comparison (`--lambda 0.25`)
+### Built-in palette comparison
 
 <table>
 <tr><th>Original</th><th>Everforest Dark Medium</th></tr>
@@ -64,6 +68,7 @@ paletteer [OPTIONS] <--theme <THEME>|--theme-file <FILE>> <INPUT>...
 | `-t`, `--theme <THEME>` | No default; required unless `--theme-file` is used | Selects one of the built-in color palettes. | Use a bundled palette without maintaining a separate file. |
 | `--theme-file <FILE>` | No default; required unless `--theme` is used | Loads a custom TOML palette. Cannot be combined with `--theme`. | Recolor with your own base and accent colors. |
 | `-n`, `--normalize-name` | Optional; off | Lowercases the generated output stem and restricts it to `a-z`, `0-9`, and `-`. | Produce predictable, shell-friendly filenames from names containing spaces, punctuation, or uppercase characters. |
+| `--palette-name-only` | Optional; off | Omits `neutral`, `lambda`, and `mix` settings from the output filename, leaving only the palette suffix. | Keep filenames short when settings are tracked elsewhere. Different settings then resolve to the same output path. |
 | `-f`, `--format <FORMAT>` | Optional; `png` | Selects `png`, `webp`, or `jpg` output. PNG is lossless; JPEG discards alpha. | Choose lossless output, smaller WebP files, or broadly compatible JPEG files. |
 | `-q`, `--quality <1-100>` | Optional; `80` for WebP/JPEG | Sets lossy encoding quality. Using it with PNG is an error. | Trade output size for visual quality when writing WebP or JPEG. |
 | `--neutral-only` | Optional; off | Excludes accent colors and adds `-neutral` to the output filename. | Produce a deliberately subdued, near-monochrome result. |

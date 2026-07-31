@@ -120,16 +120,44 @@ fn palette_labs(colors: &[u32]) -> Vec<Oklab> {
         .collect()
 }
 
-fn nearest(color: Oklab, colors: &[Oklab], lambda: f32) -> Oklab {
-    *colors
-        .iter()
-        .min_by(|a, b| {
-            let distance = |x: &Oklab| {
-                lambda * (color.l - x.l).powi(2) + (color.a - x.a).powi(2) + (color.b - x.b).powi(2)
-            };
-            distance(a).total_cmp(&distance(b))
-        })
-        .expect("palette is not empty")
+fn distance(a: Oklab, b: Oklab, lambda: f32) -> f32 {
+    lambda * (a.l - b.l).powi(2) + (a.a - b.a).powi(2) + (a.b - b.b).powi(2)
+}
+
+fn nearest_two(color: Oklab, colors: &[Oklab], lambda: f32) -> (Oklab, Oklab) {
+    let mut nearest = [(f32::INFINITY, colors[0]); 2];
+    for &candidate in colors {
+        let candidate = (distance(color, candidate, lambda), candidate);
+        if candidate.0 < nearest[0].0 {
+            nearest[1] = nearest[0];
+            nearest[0] = candidate;
+        } else if candidate.0 < nearest[1].0 {
+            nearest[1] = candidate;
+        }
+    }
+    (nearest[0].1, nearest[1].1)
+}
+
+fn dithered(color: Oklab, colors: &[Oklab], lambda: f32, threshold: f32) -> Oklab {
+    let (first, second) = nearest_two(color, colors, lambda);
+    let direction = Oklab::new(second.l - first.l, second.a - first.a, second.b - first.b);
+    let denominator = distance(first, second, lambda);
+    if denominator == 0.0 {
+        return first;
+    }
+    let amount = (lambda * (color.l - first.l) * direction.l
+        + (color.a - first.a) * direction.a
+        + (color.b - first.b) * direction.b)
+        / denominator;
+    if threshold < amount.clamp(0.0, 1.0) {
+        second
+    } else {
+        first
+    }
+}
+
+fn noise(x: usize, y: usize) -> f32 {
+    (52.982_918 * (0.067_110_56 * x as f32 + 0.005_837_15 * y as f32).fract()).fract()
 }
 
 pub fn recolor(image: &mut RgbaImage, colors: &[u32], lambda: f32, mix: f32) {
@@ -137,27 +165,37 @@ pub fn recolor(image: &mut RgbaImage, colors: &[u32], lambda: f32, mix: f32) {
         return;
     }
     let colors = palette_labs(colors);
-    image.as_mut().par_chunks_exact_mut(4).for_each(|pixel| {
-        if pixel[3] == 0 {
-            return;
-        }
-        let original = Oklab::from_color(Srgb::new(
-            pixel[0] as f32 / 255.0,
-            pixel[1] as f32 / 255.0,
-            pixel[2] as f32 / 255.0,
-        ));
-        let selected = nearest(original, &colors, lambda);
-        let remapped = Oklab::new(
-            original.l,
-            original.a + mix * (selected.a - original.a),
-            original.b + mix * (selected.b - original.b),
-        );
-        let rgb: Srgb = Srgb::from_color(remapped);
-        let (r, g, b) = rgb.into_components();
-        pixel[0] = (r.clamp(0.0, 1.0) * 255.0).round() as u8;
-        pixel[1] = (g.clamp(0.0, 1.0) * 255.0).round() as u8;
-        pixel[2] = (b.clamp(0.0, 1.0) * 255.0).round() as u8;
-    });
+    let width = image.width() as usize;
+    image
+        .as_mut()
+        .par_chunks_exact_mut(4)
+        .enumerate()
+        .for_each(|(index, pixel)| {
+            if pixel[3] == 0 {
+                return;
+            }
+            let original = Oklab::from_color(Srgb::new(
+                pixel[0] as f32 / 255.0,
+                pixel[1] as f32 / 255.0,
+                pixel[2] as f32 / 255.0,
+            ));
+            let selected = dithered(
+                original,
+                &colors,
+                lambda,
+                noise(index % width, index / width),
+            );
+            let remapped = Oklab::new(
+                original.l + mix * (selected.l - original.l),
+                original.a + mix * (selected.a - original.a),
+                original.b + mix * (selected.b - original.b),
+            );
+            let rgb: Srgb = Srgb::from_color(remapped);
+            let (r, g, b) = rgb.into_components();
+            pixel[0] = (r.clamp(0.0, 1.0) * 255.0).round() as u8;
+            pixel[1] = (g.clamp(0.0, 1.0) * 255.0).round() as u8;
+            pixel[2] = (b.clamp(0.0, 1.0) * 255.0).round() as u8;
+        });
 }
 
 pub fn encode_image(
@@ -224,8 +262,16 @@ mod tests {
     fn lambda_controls_lightness_weight() {
         let colors = [Oklab::new(0.1, 0.18, -0.08), Oklab::new(0.75, 0.0, 0.0)];
         let source = Oklab::new(0.75, 0.18, -0.08);
-        assert_eq!(nearest(source, &colors, 0.0), colors[0]);
-        assert_eq!(nearest(source, &colors, 1.0), colors[1]);
+        assert_eq!(nearest_two(source, &colors, 0.0).0, colors[0]);
+        assert_eq!(nearest_two(source, &colors, 1.0).0, colors[1]);
+    }
+
+    #[test]
+    fn dithering_selects_both_neighbors() {
+        let colors = [Oklab::new(0.0, 0.0, 0.0), Oklab::new(1.0, 0.0, 0.0)];
+        let source = Oklab::new(0.5, 0.0, 0.0);
+        assert_eq!(dithered(source, &colors, 1.0, 0.25), colors[1]);
+        assert_eq!(dithered(source, &colors, 1.0, 0.75), colors[0]);
     }
 
     #[test]
@@ -256,7 +302,7 @@ mod tests {
     }
 
     #[test]
-    fn recolor_keeps_alpha_and_gradient_lightness() {
+    fn recolor_uses_palette_lightness_and_keeps_alpha() {
         let mut image = RgbaImage::new(256, 1);
         for (x, _, pixel) in image.enumerate_pixels_mut() {
             *pixel = image::Rgba([x as u8, x as u8, x as u8, x as u8]);
@@ -273,7 +319,7 @@ mod tests {
                 .map(|p| [p[0], p[1], p[2]])
                 .collect::<std::collections::HashSet<_>>()
                 .len()
-                > EVERFOREST.neutral.len() + EVERFOREST.accents.len()
+                <= EVERFOREST.neutral.len() + EVERFOREST.accents.len()
         );
         for (x, _, pixel) in image.enumerate_pixels() {
             assert_eq!(pixel[3], x as u8);
