@@ -123,7 +123,7 @@ palette's lightness range. Every pixel's lightness is stretched or compressed by
 the same linear transform, so a dark theme pulls the whole image dark and the
 tonal contrast becomes the palette's. This is what makes a result feel like it
 belongs to the theme. Because the transform is continuous, gradients stay
-smooth: there is no lightness quantization, so no dithering is needed.
+smooth and free of banding.
 
 **2. Chroma mapping.** For each pixel the two nearest palette colors to its
 mapped-lightness / original-chroma point are found using a lightness-weighted
@@ -137,11 +137,6 @@ continuous while staying within the palette's colors.
 The output pixel takes its lightness from stage 1 and its chroma from stage 2,
 and `--mix` then linearly blends between the original Oklab color and this
 recolored one (`0` = original, `1` = full remap).
-
-Earlier versions instead quantized lightness to discrete palette levels and hid
-the resulting banding with blue-noise (interleaved-gradient) dithering, which
-left visible noise on smooth regions. The continuous range mapping replaces that
-approach entirely.
 
 ## Acknoledgements
 
