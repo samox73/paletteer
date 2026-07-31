@@ -33,17 +33,17 @@ Built-in themes: `everforest-dark-medium`, `catppuccin-mocha`, `tokyo-night`, `g
 <tr><td><img src="examples-400/DSC_2357.JPG" width="400" alt="Original DSC 2357"></td><td><img src="examples-400/dsc-2357-everforest-dark-medium.jpg" width="400" alt="Everforest DSC 2357"></td><td><img src="examples-400/dsc-2357-everforest-dark-medium-neutral.jpg" width="400" alt="Everforest neutral-only DSC 2357"></td></tr>
 </table>
 
-### Built-in palette comparison (`--mix 0.9`)
+### Built-in palette comparison
 
 <table>
 <tr><th>Original</th><th>Everforest Dark Medium</th></tr>
-<tr><td><img src="examples-400/DSC_1657.JPG" width="400" alt="Original DSC 1657"></td><td><img src="examples-400/dsc-1657-everforest-dark-medium-mix-0-9.jpg" width="400" alt="DSC 1657 recolored with Everforest Dark Medium at mix 0.9"></td></tr>
+<tr><td><img src="examples-400/DSC_1657.JPG" width="400" alt="Original DSC 1657"></td><td><img src="examples-400/dsc-1657-everforest-dark-medium.jpg" width="400" alt="DSC 1657 recolored with Everforest Dark Medium at mix 0.9"></td></tr>
 <tr><th>Catppuccin Mocha</th><th>Tokyo Night</th></tr>
-<tr><td><img src="examples-400/dsc-1657-catppuccin-mocha-mix-0-9.jpg" width="400" alt="DSC 1657 recolored with Catppuccin Mocha at mix 0.9"></td><td><img src="examples-400/dsc-1657-tokyo-night-mix-0-9.jpg" width="400" alt="DSC 1657 recolored with Tokyo Night at mix 0.9"></td></tr>
+<tr><td><img src="examples-400/dsc-1657-catppuccin-mocha.jpg" width="400" alt="DSC 1657 recolored with Catppuccin Mocha at mix 0.9"></td><td><img src="examples-400/dsc-1657-tokyo-night.jpg" width="400" alt="DSC 1657 recolored with Tokyo Night at mix 0.9"></td></tr>
 <tr><th>Gruvbox Dark Medium</th><th>Nord</th></tr>
-<tr><td><img src="examples-400/dsc-1657-gruvbox-dark-medium-mix-0-9.jpg" width="400" alt="DSC 1657 recolored with Gruvbox Dark Medium at mix 0.9"></td><td><img src="examples-400/dsc-1657-nord-mix-0-9.jpg" width="400" alt="DSC 1657 recolored with Nord at mix 0.9"></td></tr>
+<tr><td><img src="examples-400/dsc-1657-gruvbox-dark-medium.jpg" width="400" alt="DSC 1657 recolored with Gruvbox Dark Medium at mix 0.9"></td><td><img src="examples-400/dsc-1657-nord.jpg" width="400" alt="DSC 1657 recolored with Nord at mix 0.9"></td></tr>
 <tr><th>Dracula</th><th>Rosé Pine Moon</th></tr>
-<tr><td><img src="examples-400/dsc-1657-dracula-mix-0-9.jpg" width="400" alt="DSC 1657 recolored with Dracula at mix 0.9"></td><td><img src="examples-400/dsc-1657-rose-pine-moon-mix-0-9.jpg" width="400" alt="DSC 1657 recolored with Rosé Pine Moon at mix 0.9"></td></tr>
+<tr><td><img src="examples-400/dsc-1657-dracula.jpg" width="400" alt="DSC 1657 recolored with Dracula at mix 0.9"></td><td><img src="examples-400/dsc-1657-rose-pine-moon.jpg" width="400" alt="DSC 1657 recolored with Rosé Pine Moon at mix 0.9"></td></tr>
 </table>
 
 ## Installation
