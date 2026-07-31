@@ -1,7 +1,9 @@
 /target/
+/benchmark*.png
 *-everforest-dark-medium*.png
 *-everforest-dark-medium*.jpg
 *-everforest-dark-medium*.jpeg
 *-everforest-dark-medium*.webp
 !examples-400/*
 plan*.md
+.obsidian/

@@ -3,6 +3,10 @@ name = "paletteer"
 version = "0.1.0"
 edition = "2024"
 
+[[example]]
+name = "benchmark"
+path = "tools/benchmark.rs"
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 glob = "0.3"

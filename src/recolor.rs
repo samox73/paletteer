@@ -138,26 +138,25 @@ fn nearest_two(color: Oklab, colors: &[Oklab], lambda: f32) -> (Oklab, Oklab) {
     (nearest[0].1, nearest[1].1)
 }
 
-fn dithered(color: Oklab, colors: &[Oklab], lambda: f32, threshold: f32) -> Oklab {
+// Interpolate between the two nearest palette colors by the pixel's projection
+// onto the segment between them. Continuous across Voronoi boundaries, so smooth
+// chroma gradients stay smooth instead of snapping to a hard contour.
+fn blended(color: Oklab, colors: &[Oklab], lambda: f32) -> Oklab {
     let (first, second) = nearest_two(color, colors, lambda);
-    let direction = Oklab::new(second.l - first.l, second.a - first.a, second.b - first.b);
     let denominator = distance(first, second, lambda);
     if denominator == 0.0 {
         return first;
     }
-    let amount = (lambda * (color.l - first.l) * direction.l
-        + (color.a - first.a) * direction.a
-        + (color.b - first.b) * direction.b)
-        / denominator;
-    if threshold < amount.clamp(0.0, 1.0) {
-        second
-    } else {
-        first
-    }
-}
-
-fn noise(x: usize, y: usize) -> f32 {
-    (52.982_918 * (0.067_110_56 * x as f32 + 0.005_837_15 * y as f32).fract()).fract()
+    let amount = ((lambda * (color.l - first.l) * (second.l - first.l)
+        + (color.a - first.a) * (second.a - first.a)
+        + (color.b - first.b) * (second.b - first.b))
+        / denominator)
+        .clamp(0.0, 1.0);
+    Oklab::new(
+        first.l + amount * (second.l - first.l),
+        first.a + amount * (second.a - first.a),
+        first.b + amount * (second.b - first.b),
+    )
 }
 
 pub fn recolor(image: &mut RgbaImage, colors: &[u32], lambda: f32, mix: f32) {
@@ -165,37 +164,64 @@ pub fn recolor(image: &mut RgbaImage, colors: &[u32], lambda: f32, mix: f32) {
         return;
     }
     let colors = palette_labs(colors);
-    let width = image.width() as usize;
-    image
-        .as_mut()
-        .par_chunks_exact_mut(4)
-        .enumerate()
-        .for_each(|(index, pixel)| {
-            if pixel[3] == 0 {
-                return;
-            }
-            let original = Oklab::from_color(Srgb::new(
+    // ponytail: exact extrema match the requested range; use percentiles if outliers flatten contrast.
+    let (source_min, source_max) = image
+        .as_raw()
+        .par_chunks_exact(4)
+        .filter(|pixel| pixel[3] != 0)
+        .map(|pixel| {
+            Oklab::from_color(Srgb::new(
                 pixel[0] as f32 / 255.0,
                 pixel[1] as f32 / 255.0,
                 pixel[2] as f32 / 255.0,
-            ));
-            let selected = dithered(
-                original,
-                &colors,
-                lambda,
-                noise(index % width, index / width),
-            );
-            let remapped = Oklab::new(
-                original.l + mix * (selected.l - original.l),
-                original.a + mix * (selected.a - original.a),
-                original.b + mix * (selected.b - original.b),
-            );
-            let rgb: Srgb = Srgb::from_color(remapped);
-            let (r, g, b) = rgb.into_components();
-            pixel[0] = (r.clamp(0.0, 1.0) * 255.0).round() as u8;
-            pixel[1] = (g.clamp(0.0, 1.0) * 255.0).round() as u8;
-            pixel[2] = (b.clamp(0.0, 1.0) * 255.0).round() as u8;
+            ))
+            .l
+        })
+        .map(|lightness| (lightness, lightness))
+        .reduce(
+            || (f32::INFINITY, f32::NEG_INFINITY),
+            |a, b| (a.0.min(b.0), a.1.max(b.1)),
+        );
+    if !source_min.is_finite() {
+        return;
+    }
+    let (theme_min, theme_max) = colors
+        .iter()
+        .fold((f32::INFINITY, f32::NEG_INFINITY), |range, color| {
+            (range.0.min(color.l), range.1.max(color.l))
         });
+    let (scale, offset) = if source_max > source_min {
+        let scale = (theme_max - theme_min) / (source_max - source_min);
+        (scale, theme_min - source_min * scale)
+    } else {
+        (0.0, (theme_min + theme_max) / 2.0)
+    };
+    image.as_mut().par_chunks_exact_mut(4).for_each(|pixel| {
+        if pixel[3] == 0 {
+            return;
+        }
+        let original = Oklab::from_color(Srgb::new(
+            pixel[0] as f32 / 255.0,
+            pixel[1] as f32 / 255.0,
+            pixel[2] as f32 / 255.0,
+        ));
+        let theme_lightness = original.l * scale + offset;
+        let selected = blended(
+            Oklab::new(theme_lightness, original.a, original.b),
+            &colors,
+            lambda,
+        );
+        let remapped = Oklab::new(
+            original.l + mix * (theme_lightness - original.l),
+            original.a + mix * (selected.a - original.a),
+            original.b + mix * (selected.b - original.b),
+        );
+        let rgb: Srgb = Srgb::from_color(remapped);
+        let (r, g, b) = rgb.into_components();
+        pixel[0] = (r.clamp(0.0, 1.0) * 255.0).round() as u8;
+        pixel[1] = (g.clamp(0.0, 1.0) * 255.0).round() as u8;
+        pixel[2] = (b.clamp(0.0, 1.0) * 255.0).round() as u8;
+    });
 }
 
 pub fn encode_image(
@@ -262,16 +288,19 @@ mod tests {
     fn lambda_controls_lightness_weight() {
         let colors = [Oklab::new(0.1, 0.18, -0.08), Oklab::new(0.75, 0.0, 0.0)];
         let source = Oklab::new(0.75, 0.18, -0.08);
+        // At lambda 0 lightness is ignored, so the exact-chroma match wins outright.
         assert_eq!(nearest_two(source, &colors, 0.0).0, colors[0]);
+        // At lambda 1 lightness dominates, so the matching-lightness color wins.
         assert_eq!(nearest_two(source, &colors, 1.0).0, colors[1]);
     }
 
     #[test]
-    fn dithering_selects_both_neighbors() {
-        let colors = [Oklab::new(0.0, 0.0, 0.0), Oklab::new(1.0, 0.0, 0.0)];
-        let source = Oklab::new(0.5, 0.0, 0.0);
-        assert_eq!(dithered(source, &colors, 1.0, 0.25), colors[1]);
-        assert_eq!(dithered(source, &colors, 1.0, 0.75), colors[0]);
+    fn blended_interpolates_between_neighbors() {
+        let colors = [Oklab::new(0.0, 0.0, 0.0), Oklab::new(0.0, 1.0, 0.0)];
+        let midpoint = blended(Oklab::new(0.0, 0.5, 0.0), &colors, 0.25);
+        assert!((midpoint.a - 0.5).abs() < 1e-6);
+        // Endpoints stay put instead of averaging toward the other color.
+        assert_eq!(blended(Oklab::new(0.0, 0.0, 0.0), &colors, 0.25), colors[0]);
     }
 
     #[test]
@@ -302,27 +331,25 @@ mod tests {
     }
 
     #[test]
-    fn recolor_uses_palette_lightness_and_keeps_alpha() {
+    fn recolor_maps_continuous_theme_lightness_and_keeps_alpha() {
         let mut image = RgbaImage::new(256, 1);
         for (x, _, pixel) in image.enumerate_pixels_mut() {
-            *pixel = image::Rgba([x as u8, x as u8, x as u8, x as u8]);
+            *pixel = image::Rgba([x as u8, x as u8, x as u8, (x % 254 + 1) as u8]);
         }
-        recolor(
-            &mut image,
-            &built_in_colors(Theme::EverforestDarkMedium, false),
-            0.25,
-            1.0,
-        );
+        let colors = [0x202020, 0xC0C0C0];
+        recolor(&mut image, &colors, 0.25, 1.0);
         assert!(
             image
                 .pixels()
                 .map(|p| [p[0], p[1], p[2]])
                 .collect::<std::collections::HashSet<_>>()
                 .len()
-                <= EVERFOREST.neutral.len() + EVERFOREST.accents.len()
+                > colors.len()
         );
+        assert_eq!(&image.get_pixel(0, 0).0[..3], &[0x20, 0x20, 0x20]);
+        assert_eq!(&image.get_pixel(255, 0).0[..3], &[0xC0, 0xC0, 0xC0]);
         for (x, _, pixel) in image.enumerate_pixels() {
-            assert_eq!(pixel[3], x as u8);
+            assert_eq!(pixel[3], (x % 254 + 1) as u8);
         }
     }
 
