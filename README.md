@@ -1,7 +1,3 @@
-┌─┐┌─┐┬  ┌─┐┌┬┐┌┬┐┌─┐┌─┐┬─┐
-├─┘├─┤│  ├┤  │  │ ├┤ ├┤ ├┬┘
-┴  ┴ ┴┴─┘└─┘ ┴  ┴ └─┘└─┘┴└─
-
 ![Paletteer banner](banner.png)
 
 Recolor PNG, JPEG and WEBP wallpapers with built-in or custom color palettes while mapping each image's continuous lightness into the theme's tonal range.
