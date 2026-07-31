@@ -16,6 +16,10 @@ for input in assets/DSC_*.JPG; do
     "$paletteer" --theme everforest-dark-medium --format jpg --quality 80 --normalize-name \
         --lambda 0.5 --mix 1 --palette-name-only \
         --overwrite "$input"
+    # Accents-ignored column; default lambda keeps the clean -neutral suffix.
+    "$paletteer" --theme everforest-dark-medium --format jpg --quality 80 --normalize-name \
+        --mix 1 --neutral-only \
+        --overwrite "$input"
 done
 
 for theme in \
